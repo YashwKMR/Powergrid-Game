@@ -1,0 +1,2018 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Power Grid — vs 5 AI</title>
+<style>
+:root{
+  --bg:#1a1410;--bg2:#241a14;--panel:#2d2018;--panel2:#3a2a1f;
+  --ink:#f4e8d0;--ink2:#c9b896;--muted:#8a7860;--accent:#e8a445;
+  --good:#7bc96f;--bad:#e85d5d;--coal:#3a3a3a;--oil:#1a1a1a;
+  --garbage:#d4a017;--uranium:#7bc96f;--hybrid:#a87f47;--eco:#4ac4f0;
+  /* Region tints matching board look */
+  --r1:#9b67a8;--r2:#7a5240;--r3:#c44a4a;--r4:#4a85d0;--r5:#d4b048;--r6:#7a4a8a;
+  --paper:#e8d4a8;--paper2:#d4bf8e;--paper-edge:#a89070;
+  --gold:#d4a017;--gold-dk:#8b6814;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,sans-serif;overflow:hidden}
+button{background:var(--panel2);color:var(--ink);border:1px solid var(--muted);padding:6px 12px;border-radius:4px;cursor:pointer;font:inherit}
+button:hover:not(:disabled){background:var(--accent);color:#1a1410;border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--accent);color:#1a1410;border-color:var(--accent);font-weight:600}
+button.primary:hover:not(:disabled){background:#ffba5e}
+input[type=number]{background:var(--bg2);color:var(--ink);border:1px solid var(--muted);padding:4px 8px;border-radius:4px;font:inherit;width:80px}
+
+/* === START MENU === */
+#start-menu{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;z-index:100}
+#start-menu h1{font-size:48px;color:var(--accent);letter-spacing:2px}
+#start-menu h2{font-size:18px;color:var(--ink2);font-weight:400;margin-top:-12px}
+.map-choice{display:flex;gap:20px;margin-top:12px}
+.map-card{background:var(--panel);border:2px solid var(--muted);border-radius:8px;padding:20px;width:220px;text-align:center;cursor:pointer;transition:all .15s}
+.map-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.map-card.selected{border-color:var(--accent);background:var(--panel2)}
+.map-card h3{margin-bottom:8px;color:var(--accent)}
+.map-card p{color:var(--ink2);font-size:12px}
+#name-row{display:flex;gap:8px;align-items:center}
+#name-row input{background:var(--bg2);color:var(--ink);border:1px solid var(--muted);padding:8px 12px;border-radius:4px;font:inherit;width:200px}
+
+/* === GAME LAYOUT === */
+#game{display:none;height:100vh;grid-template-rows:48px 1fr 140px;grid-template-columns:1fr 320px}
+#topbar{grid-column:1/-1;background:var(--panel);border-bottom:1px solid var(--muted);display:flex;align-items:center;padding:0 16px;gap:24px}
+#topbar .title{font-weight:700;color:var(--accent);font-size:16px;letter-spacing:1px}
+#topbar .info{color:var(--ink2)}
+#topbar .info b{color:var(--ink)}
+#topbar .step{padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;background:var(--panel2);color:var(--accent)}
+
+#main{grid-column:1;grid-row:2;display:grid;grid-template-rows:1fr auto;overflow:hidden}
+#map-area{position:relative;overflow:hidden;background:
+  radial-gradient(ellipse at 30% 30%, #5aa0d0 0%, #3878b0 35%, #1e5285 70%, #103660 100%);
+  border-bottom:3px solid var(--paper-edge)}
+#map-area::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:
+  repeating-linear-gradient(45deg, transparent 0 20px, rgba(255,255,255,.025) 20px 21px),
+  repeating-linear-gradient(-45deg, transparent 0 25px, rgba(0,0,0,.04) 25px 26px);}
+#map-svg{width:100%;height:100%;display:block;position:relative;z-index:1}
+#market-row{background:var(--panel);border-top:1px solid var(--muted);padding:8px;display:flex;gap:8px;align-items:flex-start;overflow-x:auto}
+
+#side{grid-column:2;grid-row:2;background:var(--panel);border-left:1px solid var(--muted);overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px}
+
+#actionbar{grid-column:1/-1;background:var(--panel);border-top:1px solid var(--muted);padding:8px 12px;display:flex;align-items:center;gap:12px;overflow:auto;flex-wrap:wrap}
+#actionbar .phase-label{font-weight:700;color:var(--accent);min-width:140px;flex-shrink:0}
+#actionbar .hint{color:var(--ink2);flex:1;min-width:200px;font-size:12px}
+#actionbar label{font-size:12px}
+
+/* === PLAYER PANEL === */
+.player{background:var(--panel2);border-radius:6px;padding:8px;border-left:4px solid var(--c)}
+.player.active{outline:2px solid var(--accent)}
+.player.human{background:#3a2a1f}
+.player .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.player .pn{font-weight:700;color:var(--ink)}
+.player .pm{color:var(--accent);font-weight:700}
+.player .pstat{font-size:11px;color:var(--ink2);display:flex;gap:8px;flex-wrap:wrap}
+.player .pstat span{background:var(--bg2);padding:1px 6px;border-radius:3px}
+.player .pplants{display:flex;gap:3px;margin-top:4px;flex-wrap:wrap}
+.mini-plant{font-size:10px;background:var(--bg2);padding:1px 4px;border-radius:3px;border:1px solid var(--muted);display:inline-flex;align-items:center;gap:3px}
+.mini-plant .pno{font-weight:700;color:var(--accent)}
+
+/* === PLANT CARDS (board-game style) === */
+.plant{width:104px;min-width:104px;background:linear-gradient(180deg,#e8d4a8,#c4ad7c);border:2px solid #5a3e22;border-radius:7px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,.3)}
+.plant.future{opacity:.6}
+.plant:hover:not(.future):not(.disabled){transform:translateY(-3px);box-shadow:0 4px 10px rgba(232,164,69,.5);border-color:var(--accent)}
+.plant.disabled{cursor:not-allowed;opacity:.4}
+.plant-banner{height:22px;display:flex;align-items:center;justify-content:space-between;padding:0 4px;color:#fff;font-weight:700;text-shadow:0 1px 1px rgba(0,0,0,.6)}
+.plant-banner .bid{background:#fff;color:#1a1410;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;box-shadow:0 0 0 2px #5a3e22}
+.plant-banner .ico{display:flex;gap:1px;align-items:center}
+.plant-art{height:42px;background:linear-gradient(180deg,#8a7860,#6a5240);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-top:1px solid rgba(0,0,0,.3);border-bottom:1px solid rgba(0,0,0,.3)}
+.plant-art .stack{font-size:32px;opacity:.85;line-height:1}
+.plant-foot{padding:4px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#d4bf8e,#b89970);min-height:30px}
+.plant-foot .cost-row{display:flex;gap:2px;align-items:center;font-size:11px;color:#3a2818;font-weight:700}
+.plant-foot .cities-box{background:#fff;border:1.5px solid #5a3e22;border-radius:4px;padding:1px 6px;font-weight:800;font-size:15px;color:#3a2818;display:flex;align-items:center;gap:3px}
+
+/* Plant type colors (banner) */
+.t-coal .plant-banner{background:linear-gradient(180deg,#5a4030,#3a2818)}
+.t-oil  .plant-banner{background:linear-gradient(180deg,#3a3845,#1a1820)}
+.t-garbage .plant-banner{background:linear-gradient(180deg,#c89020,#8b6814)}
+.t-uranium .plant-banner{background:linear-gradient(180deg,#6ba34a,#3a6820)}
+.t-hybrid  .plant-banner{background:linear-gradient(180deg,#7a5a3a,#4a3a1a)}
+.t-eco     .plant-banner{background:linear-gradient(180deg,#4ac4f0,#1a8aaa)}
+.t-step3 .plant-banner{background:linear-gradient(180deg,#d04545,#8a2020)}
+.t-coal .plant-art{background:linear-gradient(180deg,#4a3828,#2a1808)}
+.t-oil  .plant-art{background:linear-gradient(180deg,#2a2835,#0a0810)}
+.t-garbage .plant-art{background:linear-gradient(180deg,#a87810,#5a3a08)}
+.t-uranium .plant-art{background:linear-gradient(180deg,#3a8030,#1a4a10)}
+.t-hybrid  .plant-art{background:linear-gradient(180deg,#5a4a3a,#2a1a0a)}
+.t-eco     .plant-art{background:linear-gradient(180deg,#5ab4d0,#2a6080)}
+
+.res-icon{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #000;vertical-align:middle}
+.res-icon.coal{background:#1a1a1a}
+.res-icon.oil{background:#3a2818;border-color:#000}
+.res-icon.garbage{background:#d4a017}
+.res-icon.uranium{background:#5cb04a;box-shadow:0 0 3px #7bc96f}
+.res-icon.hybrid{background:linear-gradient(135deg,#1a1a1a 50%,#3a2818 50%)}
+.res-icon.eco{background:radial-gradient(circle,#4ac4f0,#1a8aaa)}
+.plant .step3-tag{position:absolute;top:-2px;right:-2px;background:#d04545;color:#fff;font-size:9px;padding:2px 5px;border-radius:0 5px 0 5px;font-weight:800;letter-spacing:1px;z-index:2}
+.market-divider{width:2px;background:var(--muted);align-self:stretch;margin:0 4px}
+
+/* === RESOURCE MARKET (board-style) === */
+#res-mkt{background:linear-gradient(180deg,#d4bf8e,#b89970);border:2px solid #5a3e22;border-radius:5px;padding:6px;display:flex;flex-direction:column;gap:3px;min-width:340px;box-shadow:inset 0 0 8px rgba(0,0,0,.2)}
+#res-mkt .section-label{color:#3a2818;letter-spacing:1px}
+.res-row{display:flex;align-items:center;gap:4px;font-size:11px}
+.res-row .lab{width:60px;font-weight:700;color:#3a2818;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.res-row .slots{display:flex;flex:1;gap:1px}
+.res-slot{flex:1;height:16px;border:1px solid #5a3e22;display:flex;align-items:center;justify-content:center;font-size:8px;color:#5a3e22;background:#e8d4a8;border-radius:1px}
+.res-slot.filled{font-weight:700}
+.res-slot.coal.filled{background:#2a2018;color:#fff;border-color:#000}
+.res-slot.oil.filled{background:#3a2820;color:#fff;border-color:#000}
+.res-slot.garbage.filled{background:#c89020;color:#fff}
+.res-slot.uranium.filled{background:#5cb04a;color:#fff;box-shadow:inset 0 0 2px #7bc96f}
+
+/* === MAP === */
+.region{stroke:rgba(60,40,20,.35);stroke-width:1;opacity:.45;mix-blend-mode:multiply}
+.land{fill:url(#land-gradient);stroke:#5a3e22;stroke-width:2;filter:drop-shadow(2px 3px 4px rgba(0,0,0,.4))}
+.water-feature{fill:#3a78b8;stroke:#1a4878;stroke-width:.8;opacity:.92}
+.river{stroke:#3a78b8;stroke-width:1.6;fill:none;opacity:.7;stroke-linecap:round;stroke-linejoin:round}
+.state-border{stroke:#8a6f4a;stroke-width:.5;fill:none;opacity:.5;stroke-dasharray:2 1.5}
+.mountain{opacity:.55;mix-blend-mode:multiply}
+.pipe-outer{stroke:#3a2818;stroke-width:10;fill:none;stroke-linecap:round}
+.pipe-mid{stroke:#b8a890;stroke-width:7;fill:none;stroke-linecap:round}
+.pipe-hi{stroke:#e8d4a8;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-dasharray:2 14}
+.cost-ring{fill:#f4e8d0;stroke:#d4a017;stroke-width:2}
+.cost-ring-inner{fill:none;stroke:#8b6814;stroke-width:.6}
+.cost-text{fill:#1a1410;font-size:11px;font-weight:800;text-anchor:middle;dominant-baseline:central;pointer-events:none;font-family:Georgia,serif}
+.city-group{cursor:pointer}
+.city-slot{fill:#e8d4a8;stroke:#5a3e22;stroke-width:1}
+.city-slot.s10{fill:#f4e8d0}
+.city-slot.s15{fill:#e8d4a8}
+.city-slot.s20{fill:#c4ad7c}
+.city-slot-text{fill:#3a2818;font-size:6px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.city-name-bg{fill:rgba(232,212,168,.95);stroke:#5a3e22;stroke-width:.8}
+.city-name{fill:#1a1410;font-size:9px;font-weight:800;text-anchor:middle;dominant-baseline:central;pointer-events:none;font-family:Georgia,serif;letter-spacing:.3px}
+.city-group:hover .city-name-bg{fill:#fff4d4}
+.city-group.buildable .city-name-bg{fill:#a8e08a;stroke:#3a6820;stroke-width:1.5}
+.city-group.buildable{filter:drop-shadow(0 0 4px #7bc96f)}
+.house-svg{stroke:#000;stroke-width:.6}
+
+/* === LOG === */
+#log{flex:1;background:var(--bg2);border-radius:6px;padding:6px;overflow-y:auto;font-size:11px;color:var(--ink2);min-height:120px;max-height:180px}
+#log .entry{padding:2px 0;border-bottom:1px solid #2a1f17}
+#log .entry.imp{color:var(--accent);font-weight:600}
+#log .entry.bad{color:var(--bad)}
+#log .entry.good{color:var(--good)}
+
+/* === MODAL === */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal.hidden{display:none}
+.modal-box{background:var(--panel);border:2px solid var(--accent);border-radius:8px;padding:20px;max-width:600px;max-height:80vh;overflow-y:auto}
+.modal-box h2{color:var(--accent);margin-bottom:12px}
+.modal-box .row{display:flex;gap:12px;align-items:center;margin-top:12px}
+
+/* === BID UI === */
+.bid-controls{display:flex;gap:8px;align-items:center;background:var(--bg2);padding:6px 12px;border-radius:6px}
+.section-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase}
+
+/* tiny scrollbar */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--muted);border-radius:4px}
+</style>
+</head>
+<body>
+
+<div id="start-menu">
+  <h1>POWER GRID</h1>
+  <h2>vs 5 AI opponents · single session</h2>
+  <div id="name-row">
+    <label>Your name:</label>
+    <input id="player-name" value="You" maxlength="12">
+  </div>
+  <div class="map-choice">
+    <div class="map-card selected" data-map="germany">
+      <h3>Germany</h3>
+      <p>42 cities · 6 regions<br>The classic map</p>
+    </div>
+    <div class="map-card" data-map="usa">
+      <h3>United States</h3>
+      <p>42 cities · 6 regions<br>Coast to coast</p>
+    </div>
+  </div>
+  <button class="primary" id="start-btn" style="padding:12px 32px;font-size:16px">Start Game</button>
+</div>
+
+<div id="game">
+  <div id="topbar">
+    <span class="title">⚡ POWER GRID</span>
+    <span class="info">Round <b id="r-round">1</b></span>
+    <span class="info">Phase <b id="r-phase">1</b>: <b id="r-phase-name">—</b></span>
+    <span class="step">STEP <span id="r-step">1</span></span>
+    <span class="info">Map: <b id="r-map">—</b></span>
+    <span class="info" style="margin-left:auto">End triggers at <b id="r-endcities">14</b> cities</span>
+  </div>
+
+  <div id="main">
+    <div id="map-area">
+      <svg id="map-svg" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div id="market-row">
+      <div>
+        <div class="section-label">Current Market</div>
+        <div id="plants-current" style="display:flex;gap:6px"></div>
+      </div>
+      <div class="market-divider"></div>
+      <div>
+        <div class="section-label">Future Market</div>
+        <div id="plants-future" style="display:flex;gap:6px"></div>
+      </div>
+      <div class="market-divider"></div>
+      <div id="res-mkt">
+        <div class="section-label">Resource Market</div>
+        <div class="res-row"><span class="lab">Coal</span><div class="slots" id="rm-coal"></div></div>
+        <div class="res-row"><span class="lab">Oil</span><div class="slots" id="rm-oil"></div></div>
+        <div class="res-row"><span class="lab">Garbage</span><div class="slots" id="rm-garbage"></div></div>
+        <div class="res-row"><span class="lab">Uranium</span><div class="slots" id="rm-uranium"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="side">
+    <div class="section-label">Players (Turn Order)</div>
+    <div id="players"></div>
+    <div class="section-label" style="margin-top:8px">Game Log</div>
+    <div id="log"></div>
+  </div>
+
+  <div id="actionbar">
+    <span class="phase-label" id="ab-phase">Phase 1: Order</span>
+    <span class="hint" id="ab-hint">—</span>
+    <div id="ab-controls" style="display:flex;gap:8px;align-items:center"></div>
+  </div>
+</div>
+
+<div class="modal hidden" id="modal">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   POWER GRID — full ruleset, 1 human + 5 AI
+   ============================================================ */
+
+/* ---------- POWER PLANT DECK (canonical 42 plants + Step 3) ---------- */
+// [number, type, resourceCost, cities]
+// type: coal, oil, garbage, uranium, hybrid (coal+oil), eco
+const PLANT_DECK_DEF = [
+  [3, 'oil',     2, 1],  [4, 'coal',    2, 1],
+  [5, 'hybrid',  2, 1],  [6, 'garbage', 1, 1],
+  [7, 'oil',     3, 2],  [8, 'coal',    3, 2],
+  [9, 'oil',     1, 1],  [10,'coal',    2, 2],
+  [11,'uranium', 1, 2],  [12,'hybrid',  2, 2],
+  [13,'eco',     0, 1],  [14,'coal',    2, 3],
+  [15,'coal',    2, 3],  [16,'hybrid',  2, 3],
+  [17,'oil',     3, 4],  [18,'eco',     0, 2],
+  [19,'garbage', 2, 3],  [20,'coal',    3, 5],
+  [21,'hybrid',  2, 4],  [22,'eco',     0, 2],
+  [23,'uranium', 1, 3],  [24,'garbage', 2, 4],
+  [25,'coal',    2, 5],  [26,'oil',     2, 5],
+  [27,'eco',     0, 3],  [28,'uranium', 1, 4],
+  [29,'hybrid',  1, 4],  [30,'garbage', 3, 6],
+  [31,'oil',     3, 6],  [32,'coal',    3, 6],
+  [33,'eco',     0, 4],  [34,'oil',     2, 5],
+  [35,'oil',     1, 5],  [36,'coal',    3, 7],
+  [37,'eco',     0, 4],  [38,'uranium', 2, 7],
+  [39,'garbage', 2, 6],  [40,'uranium', 1, 6],
+  [42,'coal',    2, 6],  [44,'hybrid',  2, 5],
+  [46,'hybrid',  3, 7],  [50,'eco',     0, 6],
+];
+
+/* ---------- PAYOUT TABLE (cities powered -> elektros) ---------- */
+const PAYOUT = [10,22,33,44,54,64,73,82,90,98,105,112,118,124,129,134,138,142,145,148,150];
+function payoutFor(c){ return PAYOUT[Math.min(c, PAYOUT.length-1)]; }
+
+/* ---------- RESTOCK TABLE (6 players) ---------- */
+// per step -> [coal, oil, garbage, uranium]
+const RESTOCK_6P = { 1:[4,3,3,2], 2:[5,4,4,2], 3:[3,4,5,2] };
+
+/* ---------- INITIAL RESOURCE MARKET FILL ---------- */
+// Coal/oil/garbage: levels 1..8, 3 each = 24 (fills all 24)
+// Uranium: 12 total. Levels 1..8 each 1, then 10,12,14,16 each 1 → 12 slots? actually 8 slots in std uranium track with prices [1..8,10,12,14,16]
+// For simplicity: 8 slots for uranium at prices [1,2,3,4,5,6,8,10,12,14,16] but we use 16 slots model:
+// Standard: uranium track has 16 slots at prices: 1,2,3,4,5,6,7,8,10,12,14,16 — 12 slots total, 1 unit each
+const URANIUM_PRICES = [1,2,3,4,5,6,7,8,10,12,14,16]; // 12 slots
+const FUEL_PRICES = [1,2,3,4,5,6,7,8]; // 8 levels, 3 units each = 24
+
+/* ---------- AI PERSONAS ---------- */
+const AI_PERSONAS = [
+  { name:'Klaus', style:'aggressive',  color:'#e85d5d' },
+  { name:'Brigitte', style:'conservative', color:'#4a85d0' },
+  { name:'Heinz', style:'eco', color:'#5cb04a' },
+  { name:'Greta', style:'expansionist', color:'#a464c0' },
+  { name:'Otto',  style:'balanced', color:'#e8a445' },
+];
+const HUMAN_COLOR = '#f4e8d0';
+
+/* ============================================================
+   MAP DATA — Germany & USA
+   x,y in 0..900 / 0..600 viewBox
+   ============================================================ */
+
+const MAP_GERMANY = {
+  name:'Germany',
+  cities:[
+    // Region 1 NW (yellow)
+    ['Flensburg',1,420,40],['Kiel',1,460,80],['Hamburg',1,440,130],
+    ['Hannover',1,400,210],['Bremen',1,380,150],['Cuxhaven',1,360,110],['Wilhelmshaven',1,340,140],
+    // Region 2 NE (purple)
+    ['Lübeck',2,500,110],['Schwerin',2,520,150],['Rostock',2,560,90],
+    ['Torgelow',2,640,140],['Berlin',2,620,210],['Magdeburg',2,540,240],
+    // Region 3 W (blue)
+    ['Münster',3,280,250],['Essen',3,250,290],['Duisburg',3,230,300],
+    ['Düsseldorf',3,240,320],['Dortmund',3,290,290],['Kassel',3,400,300],['Aachen',3,200,360],
+    // Region 4 SW (brown)
+    ['Köln',4,250,360],['Trier',4,220,430],['Wiesbaden',4,330,400],
+    ['Saarbrücken',4,260,460],['Mannheim',4,330,440],['Frankfurt-M',4,350,380],['Fulda',4,400,360],
+    // Region 5 E (green)
+    ['Erfurt',5,490,330],['Halle',5,540,310],['Leipzig',5,570,300],
+    ['Dresden',5,640,330],['Würzburg',5,420,400],['Nürnberg',5,490,420],['Regensburg',5,560,460],
+    // Region 6 S (red)
+    ['Stuttgart',6,380,470],['Freiburg',6,310,510],['Konstanz',6,360,550],
+    ['Augsburg',6,460,490],['München',6,510,510],['Passau',6,600,500],
+  ],
+  conns:[
+    // Region 1 internal
+    ['Flensburg','Kiel',4],['Kiel','Hamburg',8],['Hamburg','Bremen',11],['Hamburg','Hannover',17],
+    ['Bremen','Hannover',10],['Bremen','Wilhelmshaven',11],['Cuxhaven','Bremen',8],['Cuxhaven','Wilhelmshaven',14],
+    ['Hannover','Kassel',15],
+    // Region 1-2 bridge
+    ['Kiel','Lübeck',4],['Hamburg','Lübeck',6],['Hamburg','Schwerin',8],
+    // Region 2 internal
+    ['Lübeck','Schwerin',6],['Schwerin','Rostock',6],['Rostock','Torgelow',19],['Schwerin','Berlin',18],
+    ['Berlin','Torgelow',15],['Berlin','Magdeburg',10],['Schwerin','Magdeburg',16],['Hannover','Magdeburg',15],
+    // Region 3 internal
+    ['Münster','Essen',6],['Essen','Duisburg',0],['Essen','Dortmund',4],['Duisburg','Düsseldorf',2],
+    ['Düsseldorf','Dortmund',8],['Dortmund','Hannover',18],['Münster','Dortmund',2],
+    ['Aachen','Düsseldorf',9],['Aachen','Köln',9],['Kassel','Dortmund',18],['Kassel','Hannover',15],
+    ['Kassel','Frankfurt-M',13],
+    // Region 4 internal
+    ['Köln','Düsseldorf',4],['Köln','Aachen',9],['Köln','Trier',21],['Köln','Wiesbaden',21],
+    ['Trier','Saarbrücken',11],['Saarbrücken','Mannheim',10],['Mannheim','Wiesbaden',11],
+    ['Wiesbaden','Frankfurt-M',0],['Frankfurt-M','Fulda',8],['Fulda','Kassel',8],['Fulda','Würzburg',11],
+    ['Mannheim','Stuttgart',6],
+    // Region 5 internal
+    ['Erfurt','Halle',6],['Halle','Leipzig',0],['Leipzig','Dresden',13],['Erfurt','Würzburg',19],
+    ['Würzburg','Nürnberg',8],['Nürnberg','Regensburg',12],['Nürnberg','Augsburg',18],
+    ['Erfurt','Fulda',13],['Magdeburg','Halle',11],
+    // Region 6 internal
+    ['Stuttgart','Augsburg',15],['Augsburg','München',6],['München','Regensburg',10],['München','Passau',14],
+    ['Stuttgart','Freiburg',16],['Freiburg','Konstanz',14],['Augsburg','Konstanz',17],['Stuttgart','Würzburg',12],
+    ['Regensburg','Passau',12],
+  ]
+};
+
+const MAP_USA = {
+  name:'United States',
+  cities:[
+    // Region 1 NW (purple)
+    ['Seattle',1,80,80],['Portland',1,70,130],['Boise',1,160,170],
+    ['Billings',1,250,120],['Cheyenne',1,290,210],['SanFrancisco',1,50,260],['SaltLakeCity',1,200,230],
+    // Region 2 SW (blue)
+    ['LosAngeles',2,100,330],['SanDiego',2,120,370],['LasVegas',2,160,300],
+    ['Phoenix',2,190,360],['SantaFe',2,290,330],['Denver',2,300,260],['KansasCity',2,470,290],
+    // Region 3 N central (red)
+    ['Fargo',3,400,130],['Duluth',3,470,140],['Minneapolis',3,480,180],
+    ['Omaha',3,440,240],['DesMoines',3,490,240],['Chicago',3,560,230],['Milwaukee',3,540,200],
+    // Region 4 S central (yellow)
+    ['Houston',4,460,440],['Dallas',4,420,400],['Memphis',4,560,360],['NewOrleans',4,530,460],
+    ['Birmingham',4,610,400],['OklahomaCity',4,420,340],['Atlanta',4,640,380],
+    // Region 5 SE (brown)
+    ['Tampa',5,720,470],['Miami',5,770,510],['Jacksonville',5,720,420],['Savannah',5,710,390],
+    ['Raleigh',5,750,300],['Norfolk',5,790,290],['Knoxville',5,670,330],
+    // Region 6 NE (green)
+    ['Detroit',6,620,210],['Cincinnati',6,640,270],['Pittsburgh',6,710,240],['Buffalo',6,740,200],
+    ['Boston',6,830,180],['NewYork',6,810,220],['Philadelphia',6,790,250],['Washington',6,780,270],
+  ],
+  conns:[
+    // Region 1
+    ['Seattle','Portland',3],['Portland','Boise',13],['Boise','Billings',12],['Boise','SaltLakeCity',8],
+    ['Billings','Cheyenne',9],['Cheyenne','SaltLakeCity',8],['SanFrancisco','SaltLakeCity',27],['SanFrancisco','Portland',23],
+    ['Seattle','Billings',9],
+    // Region 2
+    ['LosAngeles','SanDiego',3],['LosAngeles','LasVegas',9],['LasVegas','SaltLakeCity',18],['LasVegas','Phoenix',15],
+    ['Phoenix','SanDiego',14],['Phoenix','SantaFe',18],['SantaFe','Denver',13],['Denver','SaltLakeCity',21],
+    ['Denver','KansasCity',16],['SantaFe','OklahomaCity',17],['SanFrancisco','LosAngeles',23],
+    // Region 3
+    ['Fargo','Duluth',6],['Duluth','Minneapolis',5],['Minneapolis','DesMoines',8],['DesMoines','Omaha',2],
+    ['Omaha','KansasCity',5],['DesMoines','Chicago',11],['Chicago','Milwaukee',2],['Milwaukee','Minneapolis',12],
+    ['Omaha','Cheyenne',14],['Fargo','Billings',17],
+    // Region 4
+    ['Houston','Dallas',5],['Dallas','OklahomaCity',3],['Dallas','Memphis',12],['Memphis','NewOrleans',7],
+    ['NewOrleans','Houston',16],['Memphis','Birmingham',6],['Birmingham','Atlanta',3],['Atlanta','NewOrleans',12],
+    ['OklahomaCity','KansasCity',8],['OklahomaCity','Memphis',14],
+    // Region 5
+    ['Tampa','Jacksonville',4],['Jacksonville','Miami',6],['Jacksonville','Savannah',0],['Savannah','Raleigh',7],
+    ['Raleigh','Norfolk',3],['Knoxville','Atlanta',5],['Knoxville','Raleigh',7],['Atlanta','Savannah',7],
+    ['Tampa','NewOrleans',18],
+    // Region 6
+    ['Detroit','Chicago',7],['Detroit','Cincinnati',4],['Cincinnati','Pittsburgh',7],['Pittsburgh','Buffalo',7],
+    ['Buffalo','Boston',8],['Boston','NewYork',3],['NewYork','Philadelphia',0],['Philadelphia','Washington',2],
+    ['Washington','Pittsburgh',6],['Cincinnati','Knoxville',6],['Pittsburgh','NewYork',8],
+    ['Chicago','Cincinnati',7],['Washington','Raleigh',5],
+  ]
+};
+
+/* === GEOGRAPHIC OUTLINES (hand-drawn approximations) === */
+MAP_USA.outline =
+  // NW corner: Olympic Peninsula
+  "M 38,70 L 55,68 Q 72,72 80,82 " +
+  // Puget Sound notch
+  "Q 88,90 85,100 L 82,112 Q 86,118 90,108 L 95,90 " +
+  // Across Canadian border (49th parallel)
+  "L 110,68 L 165,64 L 230,60 L 310,58 L 380,58 L 420,60 " +
+  // Lake of the Woods (NW Angle notch)
+  "Q 428,68 432,60 L 442,62 L 462,60 " +
+  // Lake Superior US shore — dipping down for the lake
+  "Q 478,72 488,86 Q 530,98 565,108 Q 600,112 622,114 " +
+  // Upper Peninsula MI / Sault Ste Marie
+  "L 640,116 Q 660,122 678,124 L 698,128 " +
+  // Detroit / Lake Erie south
+  "Q 715,134 730,134 L 752,134 " +
+  // Niagara up to NY
+  "Q 770,145 782,158 L 800,170 Q 818,180 826,192 " +
+  // Maine coast (going east)
+  "L 836,205 Q 850,212 854,222 L 852,238 " +
+  // Cape Ann / Boston
+  "Q 846,248 836,252 L 830,260 " +
+  // Cape Cod (the hook)
+  "Q 832,268 840,266 Q 848,266 846,276 Q 842,282 832,278 L 822,272 " +
+  // Long Island Sound
+  "Q 815,278 808,272 L 802,266 " +
+  // Long Island
+  "Q 810,272 822,278 Q 820,284 808,280 L 798,275 " +
+  // NJ / NY Harbor
+  "Q 790,278 786,288 L 783,300 " +
+  // Delaware Bay (small indent)
+  "Q 778,308 786,310 L 792,316 " +
+  // Delmarva peninsula tip
+  "Q 798,322 795,328 L 790,332 " +
+  // Chesapeake Bay (significant indent)
+  "Q 778,322 770,330 Q 765,340 772,345 L 778,355 " +
+  // Norfolk / NC coast
+  "Q 783,365 788,378 " +
+  // Cape Hatteras (Outer Banks)
+  "L 792,392 Q 796,402 786,408 L 776,418 " +
+  // SC / GA coast
+  "Q 760,432 748,444 L 738,460 L 730,475 " +
+  // Jacksonville
+  "L 728,485 L 730,498 " +
+  // Florida east coast
+  "Q 740,508 748,520 L 758,535 L 762,550 " +
+  // Miami
+  "L 758,562 " +
+  // Florida Keys (curling SW)
+  "Q 745,572 728,568 L 715,562 Q 705,560 698,555 " +
+  // Florida west (Tampa Bay area)
+  "L 695,540 L 692,525 " +
+  // Tampa Bay (small indent)
+  "Q 685,532 680,520 Q 678,510 685,510 L 688,498 " +
+  // Cedar Key
+  "L 686,485 L 678,478 " +
+  // Florida panhandle
+  "L 660,476 L 640,478 " +
+  // Pensacola / Mobile Bay
+  "Q 625,486 615,478 L 598,476 " +
+  "Q 585,486 575,478 L 560,476 " +
+  // Biloxi / Mississippi delta / New Orleans
+  "Q 545,488 530,476 L 515,478 " +
+  // Lake Pontchartrain area (small detail)
+  "L 500,476 Q 488,484 478,476 " +
+  // Galveston Bay
+  "L 462,478 Q 452,488 442,478 L 428,476 " +
+  // Corpus Christi
+  "L 412,484 L 398,478 L 382,484 " +
+  // Padre Island / Brownsville
+  "L 365,490 L 348,482 L 335,470 " +
+  // Rio Grande (going NW up the Mexican border)
+  "Q 322,455 314,440 L 302,425 " +
+  // Big Bend
+  "Q 292,418 282,408 L 268,400 " +
+  // West Texas
+  "L 248,394 L 225,388 " +
+  // El Paso
+  "Q 208,386 190,388 L 168,388 L 145,388 L 122,388 L 105,388 " +
+  // Tijuana / CA-Mexico border
+  "Q 95,388 90,378 L 92,365 " +
+  // San Diego
+  "L 95,348 L 95,335 " +
+  // LA coast / Channel Islands
+  "Q 88,328 78,328 L 65,332 L 52,322 " +
+  // Santa Barbara to Big Sur
+  "L 42,308 Q 35,300 32,288 L 28,272 " +
+  // Monterey Bay
+  "Q 24,266 22,258 L 22,245 " +
+  // SF Bay (small indent)
+  "Q 18,238 16,230 Q 20,228 24,232 L 24,218 " +
+  // Mendocino / N California
+  "L 18,200 L 16,180 " +
+  // Oregon coast
+  "L 18,152 L 22,125 " +
+  // Washington coast back to start
+  "L 28,98 L 32,82 Z";
+
+MAP_USA.water = [
+  // Great Lakes (5)
+  "M 440,98 Q 482,88 540,96 Q 580,103 575,125 Q 540,140 478,134 Q 442,124 440,98 Z",
+  "M 555,138 Q 585,142 587,182 Q 590,218 574,228 Q 553,225 547,205 Q 545,170 555,138 Z",
+  "M 615,140 Q 648,150 644,178 Q 638,196 614,194 Q 598,180 600,158 Q 602,144 615,140 Z",
+  "M 650,206 Q 700,204 730,212 Q 728,226 692,228 Q 658,225 644,218 Q 642,210 650,206 Z",
+  "M 702,196 Q 748,194 772,200 Q 772,210 744,213 Q 715,213 702,209 Q 696,202 702,196 Z",
+  // Great Salt Lake
+  "M 188,224 Q 200,222 208,228 Q 204,238 192,236 Q 184,232 188,224 Z",
+  // Chesapeake Bay (indent)
+  "M 788,260 Q 798,272 795,290 Q 788,295 784,278 Q 784,266 788,260 Z",
+];
+
+// State borders (light gray lines, just for flavor — simplified)
+MAP_USA.borders = [
+  // Vertical-ish meridian borders (West to East)
+  "M 105,72 L 110,200 L 145,330",   // WA/ID
+  "M 215,68 L 225,250 L 235,400",   // MT/WY/CO border
+  "M 310,68 L 320,240 L 335,450",   // ND/SD/NE
+  "M 400,66 L 405,210 L 425,470",   // MN/IA/MO
+  "M 510,80 L 525,260 L 540,470",   // WI/IL
+  "M 605,98 L 625,250 L 635,420",   // MI/OH
+  "M 715,108 L 730,260 L 720,400",  // PA/VA
+  // Horizontal-ish parallel borders
+  "M 30,170 L 320,170 L 480,160",   // ~45N
+  "M 30,235 L 200,230 L 480,240 L 770,250",  // ~40N
+  "M 80,330 L 280,330 L 480,330 L 750,330",  // ~35N
+  "M 350,400 L 600,400 L 720,395",   // ~32N
+];
+
+MAP_GERMANY.outline =
+  // NW corner — Dutch border in Lower Saxony
+  "M 290,72 Q 300,62 312,55 L 325,48 " +
+  // East Frisia / North Sea coast
+  "Q 340,42 358,40 L 370,38 " +
+  // Weser estuary
+  "L 380,42 Q 386,38 392,32 L 402,28 L 412,28 " +
+  // Cuxhaven / Elbe estuary
+  "L 422,30 Q 428,38 430,46 " +
+  // Schleswig-Holstein peninsula going up to Denmark
+  "L 433,38 Q 438,28 442,22 L 450,18 L 458,22 L 462,32 " +
+  // Flensburg Fjord (slight indent at top)
+  "Q 460,38 466,42 L 472,46 " +
+  // Down east side of Schleswig
+  "L 476,58 Q 478,68 476,78 L 478,86 " +
+  // Lübeck Bay
+  "Q 490,92 504,90 L 520,86 " +
+  // Mecklenburg coast
+  "L 540,80 Q 555,76 568,80 " +
+  // Rügen island (the bulge)
+  "L 582,78 Q 596,72 602,84 L 605,92 Q 600,96 590,94 " +
+  // Back to mainland - Stralsund area
+  "L 580,98 L 595,104 Q 608,108 615,118 " +
+  // Pomeranian coast going east to Polish border
+  "L 628,128 L 642,138 Q 652,148 654,160 " +
+  // Polish border south (Oder river)
+  "L 656,178 L 656,200 Q 654,218 656,235 " +
+  // Görlitz / Saxony east border
+  "L 658,260 Q 662,278 666,295 L 670,315 " +
+  // Czech Republic border (Bohemian Forest)
+  "Q 672,335 666,348 L 658,365 Q 650,380 640,395 " +
+  // Bavarian Forest
+  "L 628,415 Q 622,430 618,445 L 615,465 " +
+  // Passau corner (Danube exits)
+  "L 612,478 Q 608,495 600,510 L 588,518 " +
+  // Austrian border (Alps)
+  "Q 565,528 540,532 L 510,536 " +
+  // Munich south
+  "L 478,540 Q 450,545 425,548 " +
+  // Lake Constance approach
+  "L 400,552 Q 380,558 360,558 " +
+  // Konstanz (Lake Constance)
+  "Q 348,556 340,548 L 332,544 " +
+  // Up Swiss border
+  "Q 322,540 315,530 L 308,518 " +
+  // Black Forest / Upper Rhine
+  "Q 302,500 296,485 L 290,470 " +
+  // Saarbrücken / French border
+  "Q 282,450 275,438 L 268,422 " +
+  // Saarland / Trier
+  "Q 258,408 246,395 L 234,380 " +
+  // Luxembourg border
+  "L 222,368 Q 212,355 208,340 " +
+  // Aachen / Belgian border
+  "L 200,328 Q 195,315 196,305 L 195,290 " +
+  // Dutch border south (Aachen NW)
+  "Q 194,275 200,265 L 202,250 " +
+  // Niederrhein / Dutch border west
+  "Q 198,232 202,215 L 205,200 " +
+  // Down Dutch border (Bocholt area)
+  "Q 200,185 205,170 L 210,150 " +
+  // North to NW corner
+  "Q 220,135 235,120 L 252,108 Q 268,95 280,84 L 290,72 Z";
+
+MAP_GERMANY.water = [
+  // Bodensee (Lake Constance)
+  "M 348,548 Q 370,544 388,548 Q 388,556 368,558 Q 348,556 348,548 Z",
+];
+
+// Major rivers — Rhine, Elbe, Danube
+MAP_GERMANY.rivers = [
+  // Rhine (south → NW, curves through Mannheim/Köln to North Sea)
+  "M 350,550 Q 335,510 325,460 Q 315,420 305,380 Q 285,355 270,330 Q 255,300 250,265 Q 248,225 252,180 Q 252,145 245,115 Q 240,90 235,70",
+  // Elbe (Dresden → Magdeburg → Hamburg → North Sea)
+  "M 655,335 Q 615,300 580,265 Q 540,235 510,200 Q 470,165 445,135 Q 425,100 415,60",
+  // Danube (south flowing E to Passau)
+  "M 312,510 Q 380,505 460,515 Q 530,520 590,510",
+];
+
+MAP_USA.rivers = [
+  // Mississippi (Minneapolis → St. Louis → New Orleans)
+  "M 470,150 Q 490,200 510,250 Q 520,300 525,360 Q 530,410 528,460",
+  // Missouri (Montana → KC)
+  "M 250,135 Q 320,180 380,220 Q 430,250 470,290",
+  // Ohio (Pittsburgh → Cincinnati → Mississippi)
+  "M 700,240 Q 670,260 645,275 Q 600,300 555,335",
+  // Colorado (Rockies → Gulf of California)
+  "M 280,255 Q 230,290 180,330 Q 155,355 130,380",
+  // Rio Grande (head → mouth)
+  "M 290,330 Q 320,380 360,430 Q 380,460 370,478",
+  // Hudson
+  "M 800,180 Q 805,200 810,220",
+  // Tennessee
+  "M 680,260 Q 660,300 620,340 Q 600,370 580,360",
+  // Columbia / Snake
+  "M 60,130 Q 100,140 140,160 Q 180,170 200,200",
+];
+
+// Mountain ranges (drawn as elliptical shaded regions; semitransparent brown/gray)
+MAP_USA.mountains = [
+  // Rocky Mountains (long N-S spine from Montana to NM)
+  { type:'ellipse', cx:228, cy:215, rx:38, ry:120, color:'#6a5a48' },
+  // Sierra Nevada (CA)
+  { type:'ellipse', cx:75,  cy:255, rx:18, ry:65,  color:'#6a5a48' },
+  // Cascades (WA/OR)
+  { type:'ellipse', cx:90,  cy:135, rx:14, ry:55,  color:'#6a5a48' },
+  // Appalachian Mountains (NE-SW from Maine to Alabama)
+  { type:'ellipse', cx:705, cy:280, rx:32, ry:115, color:'#5a4a38', rotate:-30 },
+  // Ozarks (smaller)
+  { type:'ellipse', cx:520, cy:330, rx:20, ry:18,  color:'#5a4a38' },
+];
+
+MAP_GERMANY.mountains = [
+  // Alps (S Bavaria)
+  { type:'ellipse', cx:520, cy:528, rx:90, ry:14,  color:'#5a4a38' },
+  // Black Forest (SW)
+  { type:'ellipse', cx:332, cy:498, rx:18, ry:32,  color:'#3a5230' },
+  // Bavarian Forest (E)
+  { type:'ellipse', cx:600, cy:445, rx:22, ry:30,  color:'#3a5230', rotate:-30 },
+  // Harz Mountains (central)
+  { type:'ellipse', cx:475, cy:280, rx:24, ry:14,  color:'#5a4a38' },
+  // Erzgebirge / Saxon mountains
+  { type:'ellipse', cx:615, cy:355, rx:30, ry:14,  color:'#5a4a38', rotate:-15 },
+  // Rhön / Thüringer Wald
+  { type:'ellipse', cx:435, cy:355, rx:20, ry:18,  color:'#3a5230' },
+];
+
+const MAPS = { germany: MAP_GERMANY, usa: MAP_USA };
+
+/* ============================================================
+   GAME STATE
+   ============================================================ */
+const S = {
+  map:null, mapKey:null,
+  step:1, round:1, phase:0, gameOver:false,
+  players:[],         // see makePlayer
+  order:[],           // player ids in current turn order
+  market:[],          // 8 plant cards (sorted asc by number)
+  deck:[],            // remaining plants
+  discardedPlants:[],
+  resMarket:{coal:[],oil:[],garbage:[],uranium:[]}, // arrays of prices of units present, asc
+  cityOwners:{},      // cityName -> [playerId]
+  log:[],
+  awaitingHuman:null, // {type,data} when human must act
+  step3Drawn:false,
+};
+
+function makePlayer(id, name, isHuman, color){
+  return {
+    id, name, isHuman, color,
+    money: 50,
+    plants: [],            // [{num,type,cost,cities, fuel:{coal,oil,garbage,uranium}}]
+    cities: [],            // city names connected
+    passedAuction:false,   // passed this round
+    boughtThisRound:false, // bought a plant this round
+    poweredLast:0,
+  };
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function initGame(mapKey, humanName){
+  S.mapKey = mapKey;
+  S.map = MAPS[mapKey];
+  S.step = 1; S.round = 1; S.phase = 0; S.gameOver=false; S.step3Drawn=false;
+  S.log = [];
+  S.discardedPlants = [];
+  S.cityOwners = {};
+
+  // Players: 1 human + 5 AI, randomly shuffled for initial random order
+  const players = [ makePlayer(0, humanName||'You', true, HUMAN_COLOR) ];
+  AI_PERSONAS.forEach((p,i)=> players.push(makePlayer(i+1, p.name, false, p.color)));
+  S.players = players;
+  S.players.forEach(p=>{ p.style = p.isHuman ? 'human' : AI_PERSONAS[p.id-1].style; });
+
+  // Initial random order
+  S.order = shuffle(S.players.map(p=>p.id).slice());
+
+  // Plant deck: prepare cards, 13 (the lowest plant in real game: 3) is bottom in initial market.
+  // Standard: take plants 3..13 sorted for initial market+future, rest shuffled with Step 3 card on top of bottom 1/3.
+  const all = PLANT_DECK_DEF.map(d => ({ num:d[0], type:d[1], cost:d[2], cities:d[3] }));
+  const initial = all.filter(p=>p.num<=13).sort((a,b)=>a.num-b.num);   // 11 plants (3..13)
+  // Market = lowest 8; remainder go on top of deck (sorted asc means 14+ first), then "13" stays at bottom of deck removed=
+  // Standard rule: place plant 13 face-down at bottom of draw deck. Place plants 3..12 (10 plants) in market - lowest 4 current, next 4 future.
+  // Then shuffle remaining (14..50 excluding 13's reserved) and place Step3 card in deck.
+  const market = initial.filter(p=>p.num<=12); // 3..12 = 10 plants but market is only 8 slots
+  // Adjust: market is 8 plants (3..10), plant 11&12 go to top of deck? Actual rule: market has plants 3-12 (10 plants? no, 8): 3,4,5,6,7,8,9,10 = 8.
+  // Let me use plants 3..10 as starting market (8 plants) sorted.
+  S.market = all.filter(p=>p.num>=3 && p.num<=10).sort((a,b)=>a.num-b.num);
+  // Per rules: plant 13 face-down at bottom of deck. Plants 11,12 on top of shuffled rest.
+  const p11 = all.find(p=>p.num===11);
+  const p12 = all.find(p=>p.num===12);
+  const p13 = all.find(p=>p.num===13);
+  const others = all.filter(p=>p.num>=14);
+  shuffle(others);
+  const step3 = { num:'S3', type:'step3', cost:0, cities:0, isStep3:true };
+  // Place Step3 in last third of shuffled "others"
+  const cut = Math.floor(others.length*2/3);
+  const middle = others.slice(0,cut).concat([step3], others.slice(cut));
+  // Deck top→bottom: 11, 12, ...middle..., 13
+  S.deck = [p11, p12, ...middle, p13];
+
+  // Resource market init: fill from cheapest first
+  S.resMarket = {coal:[], oil:[], garbage:[], uranium:[]};
+  // Standard initial fill: 24 of coal/oil/garbage means all 24 slots filled
+  // Uranium: 2 units at prices 14 & 16 (highest 2 slots)? Actually initial uranium = 2 (prices 14,16) for some setups. Use 2 at the top.
+  for(const t of ['coal','oil','garbage']){
+    for(const pr of FUEL_PRICES) for(let i=0;i<3;i++) S.resMarket[t].push(pr);
+  }
+  // Uranium initial: 2 units at prices 14 and 16
+  S.resMarket.uranium = [14,16];
+
+  // Hide menu, show game
+  document.getElementById('start-menu').style.display='none';
+  document.getElementById('game').style.display='grid';
+  document.getElementById('r-map').textContent = S.map.name;
+  document.getElementById('r-endcities').textContent = 14;
+
+  log('Game start: '+S.map.name+' map. 1 human + 5 AI.', 'imp');
+  render();
+  // Begin phase 1 of round 1: order determined randomly first round (already set)
+  startPhase(2); // first round, skip phase 1 ordering (it's random) and go to auction
+}
+
+/* ============================================================
+   LOGGING + RENDER
+   ============================================================ */
+function log(msg, cls){
+  S.log.push({msg, cls:cls||''});
+  if(S.log.length>200) S.log.shift();
+  const el = document.getElementById('log');
+  if(el){
+    el.innerHTML = S.log.slice(-80).map(e=>`<div class="entry ${e.cls}">${e.msg}</div>`).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+const PHASE_NAMES = {1:'Player Order',2:'Auction Plants',3:'Buy Resources',4:'Build Cities',5:'Bureaucracy'};
+function render(){
+  document.getElementById('r-round').textContent = S.round;
+  document.getElementById('r-phase').textContent = S.phase || '—';
+  document.getElementById('r-phase-name').textContent = PHASE_NAMES[S.phase] || '—';
+  document.getElementById('r-step').textContent = S.step;
+  renderPlayers(); renderMarket(); renderResMarket(); renderMap();
+}
+
+function renderPlayers(){
+  const el = document.getElementById('players');
+  // Show in current turn order
+  const ordered = S.order.map(id=>S.players.find(p=>p.id===id));
+  el.innerHTML = ordered.map((p,i)=>{
+    const plantStr = p.plants.map(pl=>{
+      const tIco = pl.type==='hybrid' ? '<span class="res-icon hybrid"></span>' :
+                   pl.type==='eco' ? '<span class="res-icon eco"></span>' :
+                   `<span class="res-icon ${pl.type}"></span>`;
+      const fuelDisp = pl.type==='eco' ? '' :
+        `${Object.values(pl.fuel||{}).reduce((a,b)=>a+b,0)}/${pl.cost*2}`;
+      return `<span class="mini-plant" title="${pl.cities} cities, uses ${pl.cost} ${pl.type}"><b class="pno">${pl.num}</b>${tIco}${fuelDisp}·${pl.cities}🏙</span>`;
+    }).join('');
+    return `<div class="player ${p.isHuman?'human':''}" style="--c:${p.color}">
+      <div class="ph"><span class="pn">${i+1}. ${p.name}${p.isHuman?' (you)':''}</span><span class="pm">${p.money}€</span></div>
+      <div class="pstat">
+        <span>🏙 ${p.cities.length}</span>
+        <span>⚡ ${maxPower(p)} max</span>
+        ${p.passedAuction?'<span style="color:var(--bad)">passed</span>':''}
+      </div>
+      <div class="pplants">${plantStr||'<span style="color:var(--muted);font-size:10px">no plants</span>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function plantTypeIcon(t){
+  if(t==='hybrid') return '<span class="res-icon hybrid"></span>';
+  if(t==='eco') return '<span class="res-icon eco"></span>';
+  return `<span class="res-icon ${t}"></span>`;
+}
+
+const PLANT_ART = {
+  coal: '🏭', oil: '⛽', garbage: '🗑️', uranium: '☢️',
+  hybrid: '⚙️', eco: '🌬️', step3: '★'
+};
+function renderMarket(){
+  const cur = document.getElementById('plants-current');
+  const fut = document.getElementById('plants-future');
+  const renderCard = (p, isFuture)=>{
+    if(p.isStep3) return `<div class="plant t-step3 ${isFuture?'future':''}">
+      <div class="step3-tag">STEP 3</div>
+      <div class="plant-banner"><span class="bid">S3</span><span class="ico">!</span></div>
+      <div class="plant-art"><span class="stack">★</span></div>
+      <div class="plant-foot"><span class="cost-row">Trigger</span></div>
+    </div>`;
+    const ico = plantTypeIcon(p.type);
+    // Cost icons: repeat icon for each unit needed
+    let costRow;
+    if(p.type==='eco'){
+      costRow = '<span style="font-style:italic;color:#1a6a8a">free</span>';
+    } else if(p.type==='hybrid'){
+      costRow = `<span class="res-icon hybrid"></span>×${p.cost}`;
+    } else {
+      const icons = [];
+      for(let i=0;i<Math.min(p.cost,4);i++) icons.push(`<span class="res-icon ${p.type}"></span>`);
+      costRow = icons.join('') + (p.cost>4?` ×${p.cost}`:'');
+    }
+    return `<div class="plant t-${p.type} ${isFuture?'future':''}" data-num="${p.num}">
+      <div class="plant-banner"><span class="bid">${p.num}</span><span class="ico">${ico}</span></div>
+      <div class="plant-art"><span class="stack">${PLANT_ART[p.type]||''}</span></div>
+      <div class="plant-foot">
+        <span class="cost-row">${costRow}</span>
+        <span class="cities-box">${p.cities}<span style="font-size:10px">🏙</span></span>
+      </div>
+    </div>`;
+  };
+  // Standard split: lowest 4 = current, highest 4 = future. But in Step 3, market is one row of 6
+  if(S.step===3 || S.market.length<=6){
+    cur.innerHTML = S.market.map(p=>renderCard(p, false)).join('');
+    fut.innerHTML = '';
+  }else{
+    const sorted = S.market.slice().sort((a,b)=>{
+      // step3 card sorts high (treat as 99 for ordering)
+      const av = a.isStep3?99:a.num, bv = b.isStep3?99:b.num;
+      return av-bv;
+    });
+    cur.innerHTML = sorted.slice(0,4).map(p=>renderCard(p,false)).join('');
+    fut.innerHTML = sorted.slice(4).map(p=>renderCard(p,true)).join('');
+  }
+}
+
+function renderResMarket(){
+  const renderTrack = (t, prices)=>{
+    const have = S.resMarket[t].slice();
+    have.sort((a,b)=>a-b);
+    return prices.map(pr=>{
+      const idx = have.indexOf(pr);
+      const filled = idx!==-1;
+      if(filled) have.splice(idx,1);
+      return `<div class="res-slot ${t} ${filled?'filled':''}">${pr}</div>`;
+    }).join('');
+  };
+  document.getElementById('rm-coal').innerHTML = renderTrack('coal', expandFuelPrices());
+  document.getElementById('rm-oil').innerHTML = renderTrack('oil', expandFuelPrices());
+  document.getElementById('rm-garbage').innerHTML = renderTrack('garbage', expandFuelPrices());
+  document.getElementById('rm-uranium').innerHTML = renderTrack('uranium', URANIUM_PRICES);
+}
+function expandFuelPrices(){
+  // For coal/oil/garbage, the track has 8 levels × 3 slots = 24 slots; show each price 3 times
+  const out=[]; for(const pr of FUEL_PRICES) for(let i=0;i<3;i++) out.push(pr); return out;
+}
+
+// ---- Convex hull (Andrew's monotone chain) ----
+function convexHull(pts){
+  if(pts.length<3) return pts.slice();
+  const P = pts.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lower=[]; for(const p of P){ while(lower.length>=2 && cross(lower[lower.length-2],lower[lower.length-1],p)<=0) lower.pop(); lower.push(p); }
+  const upper=[]; for(let i=P.length-1;i>=0;i--){ const p=P[i]; while(upper.length>=2 && cross(upper[upper.length-2],upper[upper.length-1],p)<=0) upper.pop(); upper.push(p); }
+  upper.pop(); lower.pop();
+  return lower.concat(upper);
+}
+function expandHull(h, pad){
+  if(h.length===0) return h;
+  const cx=h.reduce((s,p)=>s+p[0],0)/h.length, cy=h.reduce((s,p)=>s+p[1],0)/h.length;
+  return h.map(([x,y])=>{
+    const dx=x-cx, dy=y-cy, L=Math.hypot(dx,dy)||1;
+    return [x+dx/L*pad, y+dy/L*pad];
+  });
+}
+function smoothPath(pts){
+  // closed smooth bezier path through points
+  if(pts.length<2) return '';
+  const n=pts.length;
+  let d=`M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for(let i=0;i<n;i++){
+    const p0=pts[(i-1+n)%n], p1=pts[i], p2=pts[(i+1)%n], p3=pts[(i+2)%n];
+    const cp1x=p1[0]+(p2[0]-p0[0])/6, cp1y=p1[1]+(p2[1]-p0[1])/6;
+    const cp2x=p2[0]-(p3[0]-p1[0])/6, cp2y=p2[1]-(p3[1]-p1[1])/6;
+    d+=` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)} ${cp2x.toFixed(1)} ${cp2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d+' Z';
+}
+
+const REGION_FILLS = ['',
+  '#9b67a8', // R1 purple-ish
+  '#7a5240', // R2 brown
+  '#c44a4a', // R3 red
+  '#d4b048', // R4 yellow
+  '#5a8a4a', // R5 green
+  '#4a85d0', // R6 blue
+];
+
+function renderMap(){
+  const svg = document.getElementById('map-svg');
+  const m = S.map;
+  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+  for(const c of m.cities){ if(c[2]<minx)minx=c[2]; if(c[3]<miny)miny=c[3]; if(c[2]>maxx)maxx=c[2]; if(c[3]>maxy)maxy=c[3]; }
+  const pad=80;
+  svg.setAttribute('viewBox', `${minx-pad} ${miny-pad} ${maxx-minx+pad*2} ${maxy-miny+pad*2}`);
+
+  const cityMap = {};
+  m.cities.forEach(c=> cityMap[c[0]]={name:c[0], region:c[1], x:c[2], y:c[3]});
+
+  // --- SVG DEFS: gradients, filters, clipPath ---
+  const defs = `<defs>
+    <radialGradient id="land-gradient" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#ecd9a8"/>
+      <stop offset="60%" stop-color="#d8c190"/>
+      <stop offset="100%" stop-color="#b89970"/>
+    </radialGradient>
+    <pattern id="paper-noise" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect width="40" height="40" fill="none"/>
+      <circle cx="8" cy="12" r=".5" fill="rgba(90,60,30,.18)"/>
+      <circle cx="26" cy="6" r=".4" fill="rgba(90,60,30,.15)"/>
+      <circle cx="34" cy="28" r=".5" fill="rgba(90,60,30,.20)"/>
+      <circle cx="14" cy="34" r=".4" fill="rgba(90,60,30,.16)"/>
+    </pattern>
+    <clipPath id="land-clip"><path d="${m.outline||''}"/></clipPath>
+  </defs>`;
+
+  // --- LANDMASS: real country outline ---
+  let landSvg = '';
+  if(m.outline){
+    landSvg = `<path class="land" d="${m.outline}"/>
+               <path d="${m.outline}" fill="url(#paper-noise)" stroke="none" pointer-events="none"/>`;
+  } else {
+    // Fallback to convex hull if outline missing
+    const allPts = m.cities.map(c=>[c[2],c[3]]);
+    const landHull = expandHull(convexHull(allPts), 45);
+    landSvg = `<path class="land" d="${smoothPath(landHull)}"/>`;
+  }
+
+  // --- REGIONS: convex hulls per region, clipped to country ---
+  let regionSvg = m.outline ? '<g clip-path="url(#land-clip)">' : '<g>';
+  for(let r=1;r<=6;r++){
+    const rpts = m.cities.filter(c=>c[1]===r).map(c=>[c[2],c[3]]);
+    if(rpts.length<2) continue;
+    const hull = expandHull(convexHull(rpts), 28);
+    regionSvg += `<path class="region" fill="${REGION_FILLS[r]}" d="${smoothPath(hull)}"/>`;
+  }
+  regionSvg += '</g>';
+
+  // --- STATE/INTERNAL BORDERS (clipped to land) ---
+  let bordersSvg = '';
+  if(m.borders && m.outline){
+    bordersSvg = '<g clip-path="url(#land-clip)">';
+    for(const b of m.borders) bordersSvg += `<path class="state-border" d="${b}"/>`;
+    bordersSvg += '</g>';
+  }
+
+  // --- MOUNTAINS (clipped to land, drawn under rivers) ---
+  let mountainSvg = '';
+  if(m.mountains && m.outline){
+    mountainSvg = '<g clip-path="url(#land-clip)">';
+    for(const mt of m.mountains){
+      const rot = mt.rotate ? ` transform="rotate(${mt.rotate} ${mt.cx} ${mt.cy})"` : '';
+      mountainSvg += `<ellipse class="mountain" cx="${mt.cx}" cy="${mt.cy}" rx="${mt.rx}" ry="${mt.ry}" fill="${mt.color}"${rot}/>`;
+      // Add a few small mountain peak marks for texture
+      for(let i=0;i<5;i++){
+        const px = mt.cx + (Math.cos(i*1.3)*mt.rx*0.6);
+        const py = mt.cy + (Math.sin(i*1.3)*mt.ry*0.6);
+        mountainSvg += `<path d="M ${px-3} ${py+2} L ${px} ${py-3} L ${px+3} ${py+2} Z" fill="rgba(40,30,20,.5)" stroke="rgba(20,15,10,.6)" stroke-width=".3"/>`;
+      }
+    }
+    mountainSvg += '</g>';
+  }
+
+  // --- RIVERS (clipped to land so they don't bleed into ocean) ---
+  let riverSvg = '';
+  if(m.rivers && m.outline){
+    riverSvg = '<g clip-path="url(#land-clip)">';
+    for(const r of m.rivers) riverSvg += `<path class="river" d="${r}"/>`;
+    riverSvg += '</g>';
+  }
+
+  // --- WATER FEATURES (lakes/bays - drawn over land) ---
+  let waterSvg = '';
+  if(m.water){
+    for(const w of m.water) waterSvg += `<path class="water-feature" d="${w}"/>`;
+  }
+
+  // --- PIPES (connections): three layers for the tubular look ---
+  let pipeOuter='', pipeMid='', pipeHi='', costSvg='';
+  for(const [a,b,cost] of m.conns){
+    const ca=cityMap[a], cb=cityMap[b]; if(!ca||!cb) continue;
+    pipeOuter += `<line class="pipe-outer" x1="${ca.x}" y1="${ca.y}" x2="${cb.x}" y2="${cb.y}"/>`;
+    pipeMid   += `<line class="pipe-mid"   x1="${ca.x}" y1="${ca.y}" x2="${cb.x}" y2="${cb.y}"/>`;
+    pipeHi    += `<line class="pipe-hi"    x1="${ca.x}" y1="${ca.y}" x2="${cb.x}" y2="${cb.y}"/>`;
+    // Cost badge
+    const mx=(ca.x+cb.x)/2, my=(ca.y+cb.y)/2;
+    costSvg += `<g><circle class="cost-ring" cx="${mx}" cy="${my}" r="9.5"/><circle class="cost-ring-inner" cx="${mx}" cy="${my}" r="7"/><text class="cost-text" x="${mx}" y="${my}">${cost}</text></g>`;
+  }
+
+  // --- CITIES: name pill + 3 house slots ---
+  let citySvg='';
+  for(const c of m.cities){
+    const [name,region,x,y]=c;
+    const owners = S.cityOwners[name]||[];
+    const shortName = name.length>10 ? name.slice(0,9)+'.' : name;
+    const nameW = Math.max(36, shortName.length*5+8);
+    const buildable = S.awaitingHuman && S.awaitingHuman.type==='build' && canHumanBuild(name);
+    // House slots: 3 boxes priced 10/15/20
+    const slotW=8, slotH=8, slotY=y+3;
+    let slots='';
+    const prices=[10,15,20];
+    for(let i=0;i<3;i++){
+      const sx = x - 13 + i*9;
+      const owner = owners[i];
+      if(owner!==undefined){
+        const ply = S.players.find(p=>p.id===owner);
+        slots += `<rect class="city-slot s${prices[i]}" x="${sx}" y="${slotY}" width="${slotW}" height="${slotH}" rx="1"/>`;
+        // House mark (a tiny pentagon)
+        const hx=sx+slotW/2, hy=slotY+slotH/2;
+        slots += `<path class="house-svg" d="M ${hx-2.5} ${hy+2} L ${hx-2.5} ${hy-1} L ${hx} ${hy-3} L ${hx+2.5} ${hy-1} L ${hx+2.5} ${hy+2} Z" fill="${ply.color}"/>`;
+      } else {
+        slots += `<rect class="city-slot s${prices[i]}" x="${sx}" y="${slotY}" width="${slotW}" height="${slotH}" rx="1"/>`;
+        slots += `<text class="city-slot-text" x="${sx+slotW/2}" y="${slotY+slotH/2+.5}">${prices[i]}</text>`;
+      }
+    }
+    citySvg += `<g class="city-group ${buildable?'buildable':''}" onclick="onCityClick('${name}')">
+      <rect class="city-name-bg" x="${x-nameW/2}" y="${y-10}" width="${nameW}" height="12" rx="2"/>
+      <text class="city-name" x="${x}" y="${y-4}">${shortName}</text>
+      ${slots}
+    </g>`;
+  }
+
+  // Layer order: defs → land → noise → regions → state borders → mountains → rivers → lakes/bays → pipes → cost badges → cities
+  svg.innerHTML = defs + landSvg + regionSvg + bordersSvg + mountainSvg + riverSvg + waterSvg + pipeOuter + pipeMid + pipeHi + costSvg + citySvg;
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function maxPower(p){
+  // Total cities the player can power if they fuel all plants (capped at network size)
+  // We just show the theoretical max (sum of cities of all plants, capped)
+  const t = p.plants.reduce((a,pl)=>a+pl.cities,0);
+  return Math.min(t, p.cities.length);
+}
+
+function plantStorageCap(plant){ return plant.cost * 2; }
+function plantCurrentFuel(plant){
+  if(plant.type==='eco') return 0;
+  return Object.values(plant.fuel||{}).reduce((a,b)=>a+b,0);
+}
+
+function getCityOwners(name){ return S.cityOwners[name]||[]; }
+function maxHousesAtCity(){ return S.step; }
+function houseCostAt(name){
+  const n = getCityOwners(name).length;
+  return [10,15,20][n] || 999;
+}
+
+function connectionCostToCity(player, city){
+  // BFS shortest path from any of player's cities to target, using available conns
+  if(player.cities.length===0) return 0;
+  const adj = {};
+  for(const [a,b,c] of S.map.conns){
+    (adj[a]=adj[a]||[]).push([b,c]);
+    (adj[b]=adj[b]||[]).push([a,c]);
+  }
+  // Dijkstra
+  const dist = {};
+  const start = player.cities;
+  const pq = [];
+  for(const s of start){ dist[s]=0; pq.push([0,s]); }
+  while(pq.length){
+    pq.sort((a,b)=>a[0]-b[0]);
+    const [d, u] = pq.shift();
+    if(u===city) return d;
+    if(d>dist[u]) continue;
+    for(const [v,w] of (adj[u]||[])){
+      const nd = d + w;
+      if(nd < (dist[v]||Infinity)){ dist[v]=nd; pq.push([nd,v]); }
+    }
+  }
+  return Infinity;
+}
+
+function canPlayerBuildAt(player, city){
+  if(player.cities.includes(city)) return false; // already there
+  const n = getCityOwners(city).length;
+  if(n >= maxHousesAtCity()) return false;
+  if(player.cities.length===0) return true; // first house, anywhere
+  return connectionCostToCity(player, city) !== Infinity;
+}
+
+function totalCostToBuild(player, city){
+  const conn = player.cities.length===0 ? 0 : connectionCostToCity(player, city);
+  if(conn===Infinity) return Infinity;
+  return conn + houseCostAt(city);
+}
+
+function canHumanBuild(city){
+  const me = S.players[0];
+  return canPlayerBuildAt(me, city);
+}
+
+/* ============================================================
+   PHASE 1 — Player Order
+   ============================================================ */
+function determineOrder(){
+  // Most cities first; ties broken by highest single plant number
+  const ps = S.players.slice();
+  ps.sort((a,b)=>{
+    if(b.cities.length !== a.cities.length) return b.cities.length - a.cities.length;
+    const am = Math.max(0,...a.plants.map(p=>p.isStep3?0:+p.num));
+    const bm = Math.max(0,...b.plants.map(p=>p.isStep3?0:+p.num));
+    return bm-am;
+  });
+  S.order = ps.map(p=>p.id);
+}
+
+/* ============================================================
+   PHASE 2 — Auction Plants
+   ============================================================ */
+const AUCTION = {
+  active:false,
+  starter:null,        // player id who chose the plant
+  plant:null,          // plant being auctioned
+  currentBid:0,
+  currentBidder:null,  // player id
+  participants:[],     // ids still in
+  selectIdx:0,         // index into S.order whose turn to start auction
+  firstRound:false,    // first turn-buyers-must-buy
+  resolveAuctionPhase:null,
+};
+
+function startAuctionPhase(){
+  S.phase = 2; render();
+  // Reset auction state
+  S.players.forEach(p=>{ p.passedAuction=false; p.boughtThisRound=false; });
+  AUCTION.firstRound = (S.round===1);
+  AUCTION.selectIdx = 0;
+  log('--- Phase 2: Auction Plants ---','imp');
+  nextAuctionStarter();
+}
+
+function nextAuctionStarter(){
+  // Find next player in S.order who hasn't passed/bought
+  while(AUCTION.selectIdx < S.order.length){
+    const pid = S.order[AUCTION.selectIdx];
+    const p = S.players.find(x=>x.id===pid);
+    if(p.passedAuction || p.boughtThisRound){ AUCTION.selectIdx++; continue; }
+    // This player chooses
+    if(p.isHuman) humanChoosePlant(p);
+    else aiChoosePlant(p);
+    return;
+  }
+  // Auction phase done
+  finishAuctionPhase();
+}
+
+function finishAuctionPhase(){
+  // If round 1 and someone didn't buy, that's allowed (they just don't get a plant)
+  // Remove lowest plant from market only happens if all-pass on a chosen plant — handled inline
+  log('Auction phase complete.','imp');
+  // Discard rule: if any player has 4 plants (3 limit for 6p... actually 3-plant limit for 3-6 players),
+  // they must discard one. Already handled at buy time.
+  // Move to phase 3
+  startPhase(3);
+}
+
+/* HUMAN: choose plant to auction */
+function humanChoosePlant(player){
+  setAB('Phase 2: Choose a plant', 'Pick a plant from the current market to auction. ' + (AUCTION.firstRound?'(Round 1: cannot pass)':''),
+    AUCTION.firstRound ? [] : [{label:'Pass auction', fn:()=>{ player.passedAuction=true; log(`${player.name} passes the auction.`); AUCTION.selectIdx++; nextAuctionStarter(); }}]
+  );
+  S.awaitingHuman = {type:'choosePlant', player:player.id};
+  render();
+  // Plant click handler is wired in events
+}
+
+function humanPickedPlant(plantNum){
+  if(!S.awaitingHuman || S.awaitingHuman.type!=='choosePlant') return;
+  const player = S.players.find(p=>p.id===S.awaitingHuman.player);
+  const cur = currentMarket();
+  const plant = cur.find(p=>p.num==plantNum);
+  if(!plant){ return; }
+  if(plant.isStep3) return; // can't auction step3 directly (it's just a marker)
+  startAuction(player, plant);
+}
+
+/* AI: choose plant to auction */
+function aiChoosePlant(player){
+  const cur = currentMarket().filter(p=>!p.isStep3);
+  if(cur.length===0){ player.passedAuction=true; AUCTION.selectIdx++; nextAuctionStarter(); return; }
+
+  // AI valuation
+  const targets = cur.map(p=>({plant:p, val:aiPlantValue(player,p)})).sort((a,b)=>b.val-a.val);
+  // Decide whether to pass entirely
+  const best = targets[0];
+  // Don't buy if: not first round, has enough plants, value too low relative to price
+  const plantBudget = aiBudgetForPlant(player);
+  const needsPlant = needsPlantUrgency(player); // 0..1
+  const willParticipate = AUCTION.firstRound || (best.val > best.plant.num * (1.0 - needsPlant*0.5) && plantBudget >= best.plant.num);
+
+  if(!willParticipate){
+    player.passedAuction = true;
+    log(`${player.name} passes the auction.`);
+    AUCTION.selectIdx++;
+    setTimeout(nextAuctionStarter, 280);
+    return;
+  }
+
+  // Pick a plant: prefer one with high value but try to avoid the very best (less competition)
+  // Pick plant with highest value that AI can afford
+  const choose = targets.find(t=> t.plant.num <= player.money) || targets[0];
+  log(`${player.name} nominates plant <b>${choose.plant.num}</b> for auction.`,'imp');
+  setTimeout(()=> startAuction(player, choose.plant), 320);
+}
+
+function currentMarket(){
+  // Current market = lowest 4 plants (excluding Step3 card which sorts high)
+  if(S.step===3) return S.market.slice(); // step3 mode: whole row buyable
+  const sorted = S.market.slice().sort((a,b)=>{
+    const av = a.isStep3?99:a.num, bv = b.isStep3?99:b.num;
+    return av-bv;
+  });
+  return sorted.slice(0,4);
+}
+
+function startAuction(starter, plant){
+  AUCTION.active = true;
+  AUCTION.starter = starter.id;
+  AUCTION.plant = plant;
+  AUCTION.currentBid = plant.num; // minimum bid
+  AUCTION.currentBidder = starter.id;
+  // Participants: all players who haven't passed/bought, in S.order starting from starter
+  const idxStart = S.order.indexOf(starter.id);
+  AUCTION.participants = [];
+  for(let i=0;i<S.order.length;i++){
+    const id = S.order[(idxStart+i)%S.order.length];
+    const p = S.players.find(x=>x.id===id);
+    if(!p.passedAuction && !p.boughtThisRound) AUCTION.participants.push(id);
+  }
+  log(`${starter.name} starts auction for plant ${plant.num} at ${plant.num}€.`,'imp');
+  // Starter has bid the minimum already, move to next participant
+  nextAuctionBid();
+}
+
+function nextAuctionBid(){
+  // If only one participant left, they win
+  if(AUCTION.participants.length===1){
+    finishAuction(AUCTION.participants[0]);
+    return;
+  }
+  // Find next bidder after currentBidder
+  const idx = AUCTION.participants.indexOf(AUCTION.currentBidder);
+  const next = AUCTION.participants[(idx+1) % AUCTION.participants.length];
+  const p = S.players.find(x=>x.id===next);
+  if(p.isHuman) humanBid(p);
+  else aiBid(p);
+}
+
+function humanBid(player){
+  S.awaitingHuman = {type:'bid', player:player.id};
+  const minBid = AUCTION.currentBid + 1;
+  setAB('Auction', `Plant ${AUCTION.plant.num} — current bid ${AUCTION.currentBid}€ by ${S.players.find(p=>p.id===AUCTION.currentBidder).name}. Your turn (you have ${player.money}€).`, [
+    { label:'Pass', fn:()=>{
+        // Player passes (drops out of THIS auction)
+        AUCTION.participants = AUCTION.participants.filter(id=>id!==player.id);
+        log(`${player.name} passes on plant ${AUCTION.plant.num}.`);
+        // If starter passes on their own auction at min bid — that's not allowed; we don't allow it (the starter is committed at min bid)
+        nextAuctionBid();
+    }},
+  ], `<label>Bid: </label><input type="number" id="hbid" min="${minBid}" max="${player.money}" value="${minBid}"><button class="primary" onclick="submitHumanBid()">Bid</button>`);
+  render();
+}
+function submitHumanBid(){
+  const player = S.players[0];
+  const val = +document.getElementById('hbid').value;
+  if(val < AUCTION.currentBid+1 || val > player.money){ alert('Invalid bid'); return; }
+  AUCTION.currentBid = val;
+  AUCTION.currentBidder = player.id;
+  log(`${player.name} bids ${val}€.`);
+  nextAuctionBid();
+}
+
+function aiBid(player){
+  const plant = AUCTION.plant;
+  const max = aiMaxBid(player, plant);
+  if(AUCTION.currentBid+1 > max || AUCTION.currentBid+1 > player.money){
+    // pass
+    AUCTION.participants = AUCTION.participants.filter(id=>id!==player.id);
+    log(`${player.name} passes on plant ${plant.num}.`);
+    setTimeout(nextAuctionBid, 280);
+    return;
+  }
+  const bid = AUCTION.currentBid + 1;
+  AUCTION.currentBid = bid;
+  AUCTION.currentBidder = player.id;
+  log(`${player.name} bids ${bid}€.`);
+  setTimeout(nextAuctionBid, 280);
+}
+
+function finishAuction(winnerId){
+  const winner = S.players.find(p=>p.id===winnerId);
+  const plant = AUCTION.plant;
+  winner.money -= AUCTION.currentBid;
+  // Initialize fuel storage
+  plant.fuel = {coal:0,oil:0,garbage:0,uranium:0};
+  winner.plants.push(plant);
+  winner.boughtThisRound = true;
+  log(`${winner.name} wins plant ${plant.num} for ${AUCTION.currentBid}€.`,'good');
+
+  // Remove plant from market, refill from deck
+  S.market = S.market.filter(p=>p.num!==plant.num);
+  drawAndPlaceMarket();
+
+  // If winner has too many plants (>3), must discard one
+  if(winner.plants.length > 3){
+    if(winner.isHuman) promptDiscardPlant(winner);
+    else aiDiscardPlant(winner);
+  }
+
+  AUCTION.active = false;
+  AUCTION.selectIdx++;
+  render();
+  setTimeout(nextAuctionStarter, 400);
+}
+
+function drawAndPlaceMarket(){
+  if(S.deck.length===0) return;
+  const next = S.deck.shift();
+  if(next.isStep3){
+    log('★ STEP 3 begins!','imp');
+    S.step3Drawn = true;
+    S.step = 3;
+    // Remove lowest plant from market (sold cheapest)
+    if(S.market.length>0){
+      const sorted = S.market.slice().sort((a,b)=>(a.isStep3?99:a.num)-(b.isStep3?99:b.num));
+      const lowest = sorted[0];
+      S.market = S.market.filter(p=>p!==lowest);
+      log(`Plant ${lowest.num} removed (Step 3).`);
+    }
+    // After Step 3, all visible plants are buyable (no current/future split)
+    // The Step 3 marker is discarded from the deck.
+  } else {
+    // Insert and sort
+    S.market.push(next);
+    // Remove any plants below current min plant number from market that no player can afford (skipped - handled by Step 2)
+  }
+}
+
+function aiDiscardPlant(player){
+  // Discard the cheapest/least useful plant
+  player.plants.sort((a,b)=> aiPlantValue(player,a) - aiPlantValue(player,b));
+  const discarded = player.plants.shift();
+  // Return its fuel to nowhere (lost)
+  log(`${player.name} discards plant ${discarded.num}.`);
+  S.discardedPlants.push(discarded);
+}
+function promptDiscardPlant(player){
+  showModal(`<h2>Discard a plant</h2><p>You have ${player.plants.length} plants — discard one (fuel on it is lost).</p>
+    <div class="row">${player.plants.map((p,i)=>`<button onclick="humanDiscard(${i})">Plant ${p.num}</button>`).join('')}</div>`);
+}
+function humanDiscard(idx){
+  const me = S.players[0];
+  const d = me.plants.splice(idx,1)[0];
+  log(`${me.name} discards plant ${d.num}.`);
+  S.discardedPlants.push(d);
+  hideModal();
+  render();
+}
+
+/* ============================================================
+   PHASE 3 — Buy Resources (reverse order)
+   ============================================================ */
+function startResourcePhase(){
+  S.phase = 3; render();
+  log('--- Phase 3: Buy Resources ---','imp');
+  const order = S.order.slice().reverse();
+  buyResourcesInOrder(order, 0);
+}
+function buyResourcesInOrder(order, idx){
+  if(idx >= order.length){ startPhase(4); return; }
+  const p = S.players.find(x=>x.id===order[idx]);
+  if(p.isHuman) humanBuyResources(p, ()=>buyResourcesInOrder(order, idx+1));
+  else { aiBuyResources(p); setTimeout(()=>buyResourcesInOrder(order, idx+1), 420); }
+}
+
+function humanBuyResources(player, done){
+  S.awaitingHuman = {type:'resources', done};
+  refreshResourceUI();
+}
+function refreshResourceUI(){
+  const me = S.players[0];
+  const fuelNeeds = computeFuelNeeds(me);
+  const html = `
+    Buy resources to fuel your plants. You have ${me.money}€.
+    Capacity (each plant stores 2× its cost):
+    <div style="display:flex;gap:8px;margin-top:6px">
+      ${['coal','oil','garbage','uranium'].map(t=>{
+        const cheapest = cheapestResPrice(t);
+        const stored = totalStored(me, t);
+        const cap = totalCap(me, t);
+        return `<button ${cheapest===null||stored>=cap||cheapest>me.money?'disabled':''} onclick="humanBuyOne('${t}')">
+          +1 ${t} (${cheapest!==null?cheapest+'€':'sold out'}) [${stored}/${cap}]
+        </button>`;
+      }).join('')}
+    </div>`;
+  setAB('Phase 3: Resources', html, [{label:'Done', primary:true, fn:()=>{ const d=S.awaitingHuman.done; S.awaitingHuman=null; d(); }}]);
+  render();
+}
+function humanBuyOne(type){
+  const me = S.players[0];
+  const cheapest = cheapestResPrice(type);
+  if(cheapest===null || cheapest>me.money) return;
+  if(totalStored(me,type) >= totalCap(me,type)) return;
+  // Buy: remove cheapest unit from market, store on a plant that accepts this fuel and has room
+  me.money -= cheapest;
+  takeFromMarket(type);
+  // Place on first plant that accepts and has room
+  const target = me.plants.find(pl=> plantAccepts(pl,type) && plantCurrentFuel(pl) < plantStorageCap(pl));
+  if(target){ target.fuel = target.fuel||{coal:0,oil:0,garbage:0,uranium:0}; target.fuel[type]++; }
+  log(`${me.name} buys 1 ${type} for ${cheapest}€.`);
+  refreshResourceUI();
+}
+
+function cheapestResPrice(type){
+  if(S.resMarket[type].length===0) return null;
+  return Math.min(...S.resMarket[type]);
+}
+function takeFromMarket(type){
+  const arr = S.resMarket[type];
+  const min = Math.min(...arr);
+  arr.splice(arr.indexOf(min),1);
+}
+function plantAccepts(plant, type){
+  if(plant.type===type) return true;
+  if(plant.type==='hybrid' && (type==='coal' || type==='oil')) return true;
+  return false;
+}
+function totalCap(player, type){
+  let cap = 0;
+  for(const pl of player.plants){
+    if(plantAccepts(pl,type)) cap += plantStorageCap(pl);
+  }
+  return cap;
+}
+function totalStored(player, type){
+  let s = 0;
+  for(const pl of player.plants){
+    if(pl.fuel && pl.fuel[type]) s += pl.fuel[type];
+  }
+  return s;
+}
+
+/* ============================================================
+   PHASE 4 — Build Cities (reverse order)
+   ============================================================ */
+function startBuildPhase(){
+  S.phase = 4; render();
+  log('--- Phase 4: Build Cities ---','imp');
+  const order = S.order.slice().reverse();
+  buildInOrder(order, 0);
+}
+function buildInOrder(order, idx){
+  if(idx >= order.length){
+    // Check Step 2 trigger
+    checkStep2();
+    startPhase(5); return;
+  }
+  const p = S.players.find(x=>x.id===order[idx]);
+  if(p.isHuman) humanBuildCities(p, ()=>buildInOrder(order, idx+1));
+  else { aiBuildCities(p); setTimeout(()=>buildInOrder(order, idx+1), 480); }
+}
+
+function humanBuildCities(player, done){
+  S.awaitingHuman = {type:'build', done};
+  refreshBuildUI();
+}
+function refreshBuildUI(){
+  const me = S.players[0];
+  setAB('Phase 4: Build', `Click a glowing city on the map to build. Money: ${me.money}€. Step ${S.step} (max ${S.step} houses per city).`, [
+    {label:'Done', primary:true, fn:()=>{ const d=S.awaitingHuman.done; S.awaitingHuman=null; render(); d(); }}
+  ]);
+  render();
+}
+function onCityClick(name){
+  if(!S.awaitingHuman || S.awaitingHuman.type!=='build') return;
+  const me = S.players[0];
+  if(!canPlayerBuildAt(me, name)){ log(`Cannot build at ${name}.`,'bad'); return; }
+  const cost = totalCostToBuild(me, name);
+  if(cost > me.money){ log(`Need ${cost}€ to build at ${name}, only have ${me.money}€.`,'bad'); return; }
+  me.money -= cost;
+  me.cities.push(name);
+  S.cityOwners[name] = (S.cityOwners[name]||[]).concat(me.id);
+  log(`${me.name} builds at ${name} for ${cost}€.`,'good');
+  refreshBuildUI();
+}
+
+function checkStep2(){
+  if(S.step>=2) return;
+  // 6-player Step 2 trigger: 6 cities
+  const maxC = Math.max(...S.players.map(p=>p.cities.length));
+  if(maxC >= 6){
+    S.step = 2;
+    log('★ STEP 2 begins!','imp');
+    // Remove lowest plant, refill from deck
+    if(S.market.length>0){
+      const sorted = S.market.slice().sort((a,b)=>(a.isStep3?99:a.num)-(b.isStep3?99:b.num));
+      const lowest = sorted[0];
+      S.market = S.market.filter(p=>p!==lowest);
+      log(`Plant ${lowest.num} removed from market.`);
+      drawAndPlaceMarket();
+    }
+  }
+}
+
+/* ============================================================
+   PHASE 5 — Bureaucracy
+   ============================================================ */
+function startBureaucracyPhase(){
+  S.phase = 5; render();
+  log('--- Phase 5: Bureaucracy ---','imp');
+  // 1. Each player chooses how many cities to power
+  bureaucracyForPlayer(0);
+}
+function bureaucracyForPlayer(idx){
+  if(idx >= S.players.length){
+    // 2. Plant market update: remove highest (or lowest in step3) per rules
+    plantMarketBureaucracy();
+    // 3. Restock resources
+    restockResources();
+    // 4. Check end game
+    if(checkEndGame()) return;
+    // 5. New round
+    S.round++;
+    log(`=== Round ${S.round} begins ===`,'imp');
+    determineOrder();
+    startPhase(2);
+    return;
+  }
+  const p = S.players[idx];
+  if(p.isHuman) humanPower(p, ()=>bureaucracyForPlayer(idx+1));
+  else { aiPower(p); setTimeout(()=>bureaucracyForPlayer(idx+1), 380); }
+}
+
+function humanPower(player, done){
+  // Choose set of plants to fire
+  const candidates = player.plants.map((pl,i)=>({
+    idx:i, plant:pl,
+    canFire: pl.type==='eco' || plantCanFire(pl)
+  }));
+  const selected = new Set();
+  candidates.forEach(c=>{ if(c.canFire) selected.add(c.idx); });
+
+  const updateUI = ()=>{
+    let totalCities = 0;
+    for(const c of candidates){ if(selected.has(c.idx)) totalCities += c.plant.cities; }
+    totalCities = Math.min(totalCities, player.cities.length);
+    const pay = payoutFor(totalCities);
+    const rows = candidates.map(c=>{
+      const fuelTxt = c.plant.type==='eco' ? '✓ eco' :
+        Object.entries(c.plant.fuel||{}).filter(([k,v])=>v>0).map(([k,v])=>`${v} ${k}`).join(', ') || '(no fuel)';
+      return `<label style="display:block;padding:4px"><input type="checkbox" ${selected.has(c.idx)?'checked':''} ${!c.canFire?'disabled':''} onchange="togglePlant(${c.idx})"> Plant ${c.plant.num} (powers ${c.plant.cities}) — needs ${c.plant.cost} ${c.plant.type} · have: ${fuelTxt}</label>`;
+    }).join('');
+    setAB('Phase 5: Power', `Pick plants to fire. Powering <b>${totalCities}</b> cities → income <b>${pay}€</b>.`,
+      [{label:'Confirm', primary:true, fn:()=>{ confirmPower(player, selected, done); }}],
+      rows
+    );
+  };
+  window.togglePlant = (i)=>{ if(selected.has(i)) selected.delete(i); else selected.add(i); updateUI(); };
+  updateUI();
+}
+function confirmPower(player, selectedSet, done){
+  // Spend fuel and compute powered cities
+  let total = 0;
+  for(const i of selectedSet){
+    const pl = player.plants[i];
+    if(pl.type==='eco'){ total += pl.cities; continue; }
+    // Spend cost
+    const need = pl.cost;
+    const spent = spendFuel(pl, need);
+    if(!spent){ log(`Plant ${pl.num} couldn't fire (insufficient fuel)`,'bad'); continue; }
+    total += pl.cities;
+  }
+  const cities = Math.min(total, player.cities.length);
+  const pay = payoutFor(cities);
+  player.money += pay;
+  player.poweredLast = cities;
+  log(`${player.name} powers ${cities} cities → ${pay}€.`,'good');
+  done();
+}
+
+function plantCanFire(plant){
+  if(plant.type==='eco') return true;
+  const need = plant.cost;
+  if(plant.type==='hybrid'){
+    return (plant.fuel.coal + plant.fuel.oil) >= need;
+  }
+  return (plant.fuel[plant.type]||0) >= need;
+}
+function spendFuel(plant, need){
+  if(plant.type==='eco') return true;
+  if(plant.type==='hybrid'){
+    // Spend any mix
+    let remaining = need;
+    const total = plant.fuel.coal + plant.fuel.oil;
+    if(total < need) return false;
+    // prefer the more plentiful in market (i.e. spend the one cheaper to replace)
+    const useCoalFirst = (plant.fuel.coal >= plant.fuel.oil);
+    if(useCoalFirst){
+      const a = Math.min(remaining, plant.fuel.coal); plant.fuel.coal-=a; remaining-=a;
+      plant.fuel.oil -= remaining;
+    } else {
+      const a = Math.min(remaining, plant.fuel.oil); plant.fuel.oil-=a; remaining-=a;
+      plant.fuel.coal -= remaining;
+    }
+    return true;
+  }
+  if((plant.fuel[plant.type]||0) < need) return false;
+  plant.fuel[plant.type] -= need;
+  return true;
+}
+
+function plantMarketBureaucracy(){
+  // Remove highest-numbered plant from future market, put on bottom of deck, draw next
+  if(S.market.length===0) return;
+  // In Step 3, only remove lowest in market that's <= highest plant any player owns (cleanup): rules say in Step 3, just remove highest from market
+  const sorted = S.market.slice().sort((a,b)=>(a.isStep3?99:a.num)-(b.isStep3?99:b.num));
+  if(S.step===3){
+    // No future market, but Step 3 says remove highest plant of market that's not yet sold and replace
+    // For simplicity: do nothing in Step 3 bureaucracy beyond standard
+    return;
+  }
+  const highest = sorted[sorted.length-1];
+  // Don't shuffle the highest in (rule), instead remove and draw a new one to market
+  S.market = S.market.filter(p=>p!==highest);
+  S.deck.push(highest); // back to bottom of deck
+  drawAndPlaceMarket();
+
+  // Also, remove plants in market with number <= max cities of any player (Step 2 rule each round)
+  const maxC = Math.max(...S.players.map(p=>p.cities.length));
+  let removed=true;
+  while(removed){
+    removed = false;
+    const sm = S.market.filter(p=>!p.isStep3 && p.num <= maxC);
+    if(sm.length>0){
+      const low = sm.sort((a,b)=>a.num-b.num)[0];
+      S.market = S.market.filter(p=>p!==low);
+      log(`Plant ${low.num} removed (≤${maxC} cities).`);
+      drawAndPlaceMarket();
+      removed = true;
+    }
+  }
+}
+
+function restockResources(){
+  const r = RESTOCK_6P[S.step];
+  const types = ['coal','oil','garbage','uranium'];
+  for(let i=0;i<4;i++){
+    let toAdd = r[i];
+    const type = types[i];
+    // Fill from cheapest empty slot upward
+    if(type==='uranium'){
+      // For uranium, find cheapest empty price
+      const have = S.resMarket.uranium.slice().sort((a,b)=>a-b);
+      const filled = {};
+      for(const pr of have) filled[pr] = (filled[pr]||0)+1;
+      for(const pr of URANIUM_PRICES){
+        if(toAdd<=0) break;
+        if(!filled[pr]){ S.resMarket.uranium.push(pr); toAdd--; filled[pr]=1; }
+      }
+    } else {
+      // For coal/oil/garbage, each price slot has 3 capacity
+      const counts = {};
+      for(const pr of FUEL_PRICES) counts[pr]=0;
+      for(const pr of S.resMarket[type]) counts[pr]++;
+      for(const pr of FUEL_PRICES){
+        while(toAdd>0 && counts[pr] < 3){ S.resMarket[type].push(pr); counts[pr]++; toAdd--; }
+      }
+    }
+  }
+  log(`Resources restocked (Step ${S.step}): +${r[0]} coal, +${r[1]} oil, +${r[2]} garbage, +${r[3]} uranium.`);
+}
+
+function checkEndGame(){
+  const winners = S.players.filter(p=>p.cities.length >= 14);
+  if(winners.length===0) return false;
+  // End of game: highest-poweredLast wins, tie -> money
+  S.players.sort((a,b)=>{
+    if(b.poweredLast !== a.poweredLast) return b.poweredLast - a.poweredLast;
+    return b.money - a.money;
+  });
+  const winner = S.players[0];
+  S.gameOver = true;
+  log(`🏆 GAME OVER — ${winner.name} wins by powering ${winner.poweredLast} cities!`,'imp');
+  showModal(`<h2>🏆 ${winner.name} wins!</h2>
+    <p>Powered ${winner.poweredLast} cities · ${winner.money}€ remaining</p>
+    <h3>Final standings:</h3>
+    <ol>${S.players.map(p=>`<li><b style="color:${p.color}">${p.name}</b> — ${p.poweredLast} powered, ${p.cities.length} owned, ${p.money}€</li>`).join('')}</ol>
+    <div class="row"><button class="primary" onclick="location.reload()">New Game</button></div>`);
+  return true;
+}
+
+/* ============================================================
+   PHASE DISPATCHER
+   ============================================================ */
+function startPhase(n){
+  S.phase = n;
+  if(n===1){ determineOrder(); render(); setTimeout(()=>startPhase(2), 400); return; }
+  if(n===2){ startAuctionPhase(); return; }
+  if(n===3){ startResourcePhase(); return; }
+  if(n===4){ startBuildPhase(); return; }
+  if(n===5){ startBureaucracyPhase(); return; }
+}
+
+/* ============================================================
+   AI HEURISTICS
+   ============================================================ */
+function aiPlantValue(player, plant){
+  // Value = (cities powered) * weight - operating cost - opportunity considerations
+  if(plant.isStep3) return -100;
+  const eff = plant.cities;
+  const fuelCost = plant.type==='eco' ? 0 : plant.cost * estResourcePrice(plant.type);
+  let val = eff * 18 - fuelCost*1.5;
+  // Eco bonus
+  if(plant.type==='eco') val += 12;
+  // Uranium: cheap fuel
+  if(plant.type==='uranium') val += 4;
+  // Style modifiers
+  if(player.style==='eco' && plant.type==='eco') val += 25;
+  if(player.style==='aggressive') val += plant.cities*3;
+  if(player.style==='conservative') val -= plant.num * 0.2;
+  if(player.style==='expansionist') val += eff*4;
+  // Penalty if player already has stronger plant of same kind
+  for(const pl of player.plants){
+    if(pl.type===plant.type && pl.cities>=plant.cities) val -= 8;
+  }
+  return val;
+}
+function estResourcePrice(t){
+  if(t==='eco') return 0;
+  if(t==='hybrid'){
+    const c = cheapestResPrice('coal') ?? 8;
+    const o = cheapestResPrice('oil') ?? 8;
+    return Math.min(c,o);
+  }
+  return cheapestResPrice(t) ?? 8;
+}
+function aiBudgetForPlant(player){
+  // Save at least 20€ for resources + connections, more if late round
+  const reserve = 12 + player.cities.length*2;
+  return Math.max(0, player.money - reserve);
+}
+function needsPlantUrgency(player){
+  // 0..1; higher if can't power enough cities
+  const max = player.plants.reduce((a,p)=>a+p.cities,0);
+  const owned = player.cities.length;
+  if(max >= owned + 1) return 0.1;
+  if(max >= owned) return 0.4;
+  return 0.9;
+}
+function aiMaxBid(player, plant){
+  // value-based bid cap, with style adjustment
+  const base = Math.max(plant.num, Math.floor(aiPlantValue(player, plant) * 0.7));
+  let cap = Math.min(base, aiBudgetForPlant(player) + plant.num*0.5);
+  // Limit absolute
+  cap = Math.min(cap, player.money);
+  // Style: aggressive bids harder, conservative softer
+  if(player.style==='aggressive') cap += 4;
+  if(player.style==='conservative') cap -= 3;
+  if(player.style==='balanced') cap += 1;
+  // Urgency
+  cap += needsPlantUrgency(player)*8;
+  return Math.floor(cap);
+}
+
+function aiBuyResources(player){
+  // Buy what's needed to power as many cities as possible NEXT round
+  // For each plant, want 2x cost (full storage) but at least enough to fire once.
+  // Order: prioritize plants you can actually use (cities >= 1)
+  let safety=120;
+  while(safety-- > 0){
+    let bought = false;
+    // For each plant, see what fuel it needs to be able to fire (cost) up to capacity
+    const plantsByPriority = player.plants.slice().sort((a,b)=>b.cities-a.cities);
+    for(const pl of plantsByPriority){
+      if(pl.type==='eco') continue;
+      const cur = plantCurrentFuel(pl);
+      const cap = plantStorageCap(pl);
+      const desired = Math.min(cap, pl.cost*2);
+      if(cur >= desired) continue;
+      // Pick fuel type
+      const types = pl.type==='hybrid' ? ['coal','oil'] : [pl.type];
+      // Choose cheaper of the two for hybrid
+      types.sort((a,b)=>(cheapestResPrice(a)??99)-(cheapestResPrice(b)??99));
+      for(const t of types){
+        const price = cheapestResPrice(t);
+        if(price===null) continue;
+        // Reserve money for building & next round
+        const reserve = 8 + (player.style==='conservative'?6:0);
+        if(price > player.money - reserve) continue;
+        // Buy 1
+        player.money -= price;
+        takeFromMarket(t);
+        pl.fuel = pl.fuel||{coal:0,oil:0,garbage:0,uranium:0};
+        pl.fuel[t]++;
+        log(`${player.name} buys 1 ${t} for ${price}€.`);
+        bought = true;
+        break;
+      }
+      if(bought) break;
+    }
+    if(!bought) break;
+  }
+}
+
+function aiBuildCities(player){
+  // Greedy: build to expand network up to the number of cities the player can power (with margin)
+  // Decide target number of cities to add
+  const totalPower = player.plants.reduce((a,p)=>a+p.cities,0);
+  const want = Math.min(totalPower+1, player.cities.length + 2);
+  let toAdd = Math.max(0, want - player.cities.length);
+  // Aggressive/expansionist build more
+  if(player.style==='expansionist') toAdd += 1;
+  if(player.style==='aggressive') toAdd += 1;
+  if(player.style==='conservative') toAdd = Math.max(0, toAdd-1);
+  // Reserve money
+  const reserve = 6;
+  let safety=20;
+  while(toAdd-- > 0 && safety-- > 0){
+    // Pick best city to build: minimize cost, prefer same-region clustering
+    const candidates = [];
+    for(const c of S.map.cities){
+      const name = c[0];
+      if(!canPlayerBuildAt(player, name)) continue;
+      const cost = totalCostToBuild(player, name);
+      if(cost===Infinity) continue;
+      if(cost > player.money - reserve) continue;
+      // Score: lower cost is better, prefer cities with fewer existing owners
+      const numOwners = getCityOwners(name).length;
+      let score = -cost - numOwners*3;
+      // Prefer cities in same region as existing builds
+      if(player.cities.length>0){
+        const sameRegion = c[1] === S.map.cities.find(x=>x[0]===player.cities[0])[1];
+        if(sameRegion) score += 6;
+      }
+      candidates.push({name, cost, score});
+    }
+    if(candidates.length===0) break;
+    candidates.sort((a,b)=>b.score-a.score);
+    const pick = candidates[0];
+    player.money -= pick.cost;
+    player.cities.push(pick.name);
+    S.cityOwners[pick.name] = (S.cityOwners[pick.name]||[]).concat(player.id);
+    log(`${player.name} builds at ${pick.name} for ${pick.cost}€.`,'good');
+  }
+}
+
+function aiPower(player){
+  // Choose set of plants to fire to maximize income
+  // Try all subsets up to 2^plants (max 3 plants = 8 subsets) — small enough
+  const plants = player.plants;
+  const owned = player.cities.length;
+  let best = {cities:0, set:[]};
+  const N = plants.length;
+  for(let mask=0; mask<(1<<N); mask++){
+    // Check if subset can fire
+    let fuel = {coal:0,oil:0,garbage:0,uranium:0};
+    let canAll = true;
+    let cities = 0;
+    // Use copies of fuel from each plant
+    for(let i=0;i<N;i++){
+      if(!(mask & (1<<i))) continue;
+      const pl = plants[i];
+      // Reuse plant's fuel directly (we won't actually spend yet)
+      if(!plantCanFire(pl)){ canAll=false; break; }
+      cities += pl.cities;
+    }
+    if(!canAll) continue;
+    const eff = Math.min(cities, owned);
+    if(eff > best.cities) best = {cities:eff, set:mask};
+  }
+  // Spend fuel for best
+  let totalCities = 0;
+  for(let i=0;i<N;i++){
+    if(!(best.set & (1<<i))) continue;
+    const pl = plants[i];
+    if(pl.type==='eco'){ totalCities += pl.cities; continue; }
+    spendFuel(pl, pl.cost);
+    totalCities += pl.cities;
+  }
+  const eff = Math.min(totalCities, owned);
+  const pay = payoutFor(eff);
+  player.money += pay;
+  player.poweredLast = eff;
+  log(`${player.name} powers ${eff} cities → ${pay}€.`,'good');
+}
+
+function computeFuelNeeds(player){
+  const needs = {coal:0,oil:0,garbage:0,uranium:0};
+  for(const pl of player.plants){
+    if(pl.type==='eco') continue;
+    const cap = plantStorageCap(pl);
+    const cur = plantCurrentFuel(pl);
+    const want = Math.min(cap, pl.cost*2);
+    const diff = Math.max(0, want - cur);
+    if(pl.type==='hybrid'){ needs.coal += diff/2; needs.oil += diff/2; }
+    else needs[pl.type] += diff;
+  }
+  return needs;
+}
+
+/* ============================================================
+   ACTION BAR / MODAL HELPERS
+   ============================================================ */
+function setAB(phase, hint, buttons, extraHtml){
+  document.getElementById('ab-phase').textContent = phase;
+  document.getElementById('ab-hint').innerHTML = hint;
+  const c = document.getElementById('ab-controls');
+  c.innerHTML='';
+  if(extraHtml){ const w=document.createElement('div'); w.innerHTML = extraHtml; w.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap'; c.appendChild(w); }
+  (buttons||[]).forEach(b=>{
+    const btn = document.createElement('button');
+    btn.textContent = b.label;
+    if(b.primary) btn.className='primary';
+    btn.onclick = b.fn;
+    c.appendChild(btn);
+  });
+}
+
+function showModal(html){
+  document.getElementById('modal-box').innerHTML = html;
+  document.getElementById('modal').classList.remove('hidden');
+}
+function hideModal(){ document.getElementById('modal').classList.add('hidden'); }
+
+/* ============================================================
+   EVENT WIRING
+   ============================================================ */
+window.addEventListener('DOMContentLoaded', ()=>{
+  let chosenMap='germany';
+  document.querySelectorAll('.map-card').forEach(c=>{
+    c.onclick = ()=>{
+      document.querySelectorAll('.map-card').forEach(x=>x.classList.remove('selected'));
+      c.classList.add('selected');
+      chosenMap = c.dataset.map;
+    };
+  });
+  document.getElementById('start-btn').onclick = ()=>{
+    const name = document.getElementById('player-name').value.trim() || 'You';
+    initGame(chosenMap, name);
+  };
+  // Delegate plant clicks
+  document.addEventListener('click', e=>{
+    const pCard = e.target.closest('.plant');
+    if(!pCard) return;
+    const num = pCard.dataset.num;
+    if(!num) return;
+    if(S.awaitingHuman && S.awaitingHuman.type==='choosePlant'){
+      humanPickedPlant(num);
+    }
+  });
+});
+
+// Expose for inline onclicks
+window.onCityClick = onCityClick;
+window.submitHumanBid = submitHumanBid;
+window.humanBuyOne = humanBuyOne;
+window.humanDiscard = humanDiscard;
+
+</script>
+</body>
+</html>
