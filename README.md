@@ -35,22 +35,6 @@ A single-file, browser-playable implementation of the board game **Power Grid** 
 
 ---
 
-## Hosting on GitHub Pages
-
-1. Create a new public GitHub repository.
-2. Upload `power_grid.html`, `README.md`, `LICENSE`, `.gitignore`.
-3. Rename `power_grid.html` → `index.html` (so it loads at the repo root) **OR** keep the filename and link to it directly.
-4. In the repo: **Settings → Pages → Source: Deploy from a branch → Branch: main / (root)**.
-5. Your site will be live at `https://<your-username>.github.io/<repo-name>/`.
-
-It usually takes 1–2 minutes after enabling Pages before the site goes live.
-
-### Alternative quick hosting
-- **Netlify Drop** (no account needed): drag the folder onto [app.netlify.com/drop](https://app.netlify.com/drop) — instant URL.
-- **Cloudflare Pages** or **Vercel**: drag-and-drop with a free account.
-
----
-
 ## Privacy
 
 This game runs entirely in your browser:
@@ -59,8 +43,6 @@ This game runs entirely in your browser:
 - No cookies, no `localStorage`, no `sessionStorage`
 - No analytics, no telemetry, no fingerprinting
 - The player name you type is held only in browser memory and is discarded on refresh
-
-You can verify this yourself: open the file in a text editor and search for `fetch`, `http`, `localStorage`, `api` — none of these will appear.
 
 ---
 
